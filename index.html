@@ -23,19 +23,22 @@
 @font-face{font-family:'Cera Pro';src:url('fonts/Cera Pro Black.otf') format('opentype');font-weight:900;font-display:swap;}
 :root{
   --bg: radial-gradient(1200px 640px at 50% -8%, #2b0a12 0%, #17070c 52%, #0d0406 100%);
-  --display:'Seagram',Georgia,serif; --body:'Cera Pro',system-ui,-apple-system,sans-serif;
+  --title:'Seagram',Georgia,serif; --body:'Cera Pro',system-ui,-apple-system,sans-serif; --display:'Cera Pro',system-ui,-apple-system,sans-serif;
   --pink:#ff06a3; --red:#fb0000; --wine:#9d0000; --green:#3ddc97; --amber:#f6a821;
   --muted:#d6b9c9; --surface:rgba(255,255,255,0.05); --border:rgba(255,255,255,0.12);
 }
-*{box-sizing:border-box;} html,body{margin:0;}
+*{box-sizing:border-box;min-width:0;} html,body{margin:0;max-width:100%;overflow-x:hidden;}
 body{background:var(--bg);min-height:100vh;font-family:var(--body);color:#fff;padding:28px 18px 48px;}
 .container{max-width:920px;margin:0 auto;}
 .eyebrow{text-transform:uppercase;letter-spacing:2px;font-size:11px;color:#ff06a3;font-weight:600;margin-bottom:4px;}
-.topbar{display:flex;align-items:center;gap:16px;flex-wrap:wrap;justify-content:space-between;margin-bottom:18px;}
+.topbar{margin-bottom:18px;}
+.topRow{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px;}
+.topInfo{text-align:center;}
+.topInfo .eyebrow{margin-bottom:6px;}
 .secRow{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap;}
 .secRow .tab{flex:1 1 30%;justify-content:center;white-space:nowrap;padding:10px 8px;}
 .card{background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:22px;margin-bottom:16px;}
-.cardTitle{font-family:var(--display);font-size:20px;color:#fff;margin:0 0 4px;font-weight:600;}
+.cardTitle{font-family:var(--display);font-size:19px;color:#fff;margin:0 0 4px;font-weight:700;letter-spacing:-0.01em;}
 .field{width:100%;background:rgba(0,0,0,0.25);border:1px solid var(--border);border-radius:12px;padding:12px 14px;color:#fff;font-size:15px;font-family:var(--body);outline:none;}
 .field:focus{border-color:#ff06a3;} .field::placeholder{color:#8A79A6;}
 .btn-primary{display:inline-flex;align-items:center;gap:8px;background:linear-gradient(90deg,#ff06a3,#fb0000);color:#fff;border:none;border-radius:12px;padding:12px 18px;font-size:15px;font-weight:600;cursor:pointer;font-family:var(--body);}
@@ -46,10 +49,10 @@ body{background:var(--bg);min-height:100vh;font-family:var(--body);color:#fff;pa
 .tab{display:inline-flex;align-items:center;gap:7px;background:var(--surface);color:var(--muted);border:1px solid var(--border);border-radius:999px;padding:9px 16px;font-size:14px;cursor:pointer;font-family:var(--body);}
 .tab-on{background:#fff;color:#17070c;border-color:#fff;font-weight:600;}
 .navBtn{background:var(--surface);border:1px solid var(--border);border-radius:10px;color:#fff;cursor:pointer;padding:7px 9px;display:flex;}
-.calGrid{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;}
-.weekhead{text-align:center;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;}
-.calCell{background:transparent;border:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;padding:4px 0;border-radius:10px;}
-.dayCircle{width:34px;height:34px;border-radius:999px;display:flex;align-items:center;justify-content:center;font-family:var(--display);font-size:15px;font-weight:600;transition:background .3s ease;}
+.calGrid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px;width:100%;justify-items:center;}
+.weekhead{width:100%;text-align:center;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;}
+.calCell{background:transparent;border:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:4px 0;border-radius:10px;width:100%;}
+.dayCircle{width:34px;height:34px;border-radius:999px;display:flex;align-items:center;justify-content:center;font-family:var(--display);font-size:14px;font-weight:600;transition:background .3s ease;}
 .vidDots{display:flex;gap:3px;height:6px;}
 .vidDot{width:5px;height:5px;border-radius:999px;background:#ff06a3;display:inline-block;}
 .check{display:flex;align-items:center;gap:12px;padding:14px 16px;border:1px solid var(--border);border-radius:12px;margin-bottom:10px;cursor:pointer;color:#fff;font-size:15px;}
@@ -57,7 +60,9 @@ body{background:var(--bg);min-height:100vh;font-family:var(--body);color:#fff;pa
 .extraBtn{width:100%;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 16px;border:1px solid var(--border);border-radius:12px;margin-bottom:10px;cursor:pointer;color:#fff;font-size:15px;font-family:var(--body);background:var(--surface);text-align:left;}
 .extraBtn:hover{border-color:#ff06a3;}
 .extraCount{background:rgba(255,6,163,0.18);border:1px solid rgba(255,6,163,0.5);color:#fff;border-radius:999px;padding:2px 10px;font-size:13px;font-weight:700;}
-.racksTitle{font-family:var(--display);font-size:30px;color:#ff0095;margin:0 0 6px;font-weight:600;line-height:1.1;text-align:center;}
+.ptsTag{background:rgba(255,6,163,0.16);border:1px solid rgba(255,6,163,0.45);color:#ff06a3;border-radius:999px;padding:2px 9px;font-size:12px;font-weight:700;white-space:nowrap;}
+.extraSec{font-family:var(--display);font-size:15px;font-weight:700;color:#ff06a3;margin:18px 0 8px;text-transform:uppercase;letter-spacing:0.06em;}
+.racksTitle{font-family:var(--title);font-size:32px;color:#ff0095;margin:0 0 6px;font-weight:600;line-height:1.1;text-align:center;}
 .pagoBtn{background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:999px;padding:9px 18px;font-size:14px;font-family:var(--body);cursor:pointer;}
 .pagoBtn:hover{border-color:#ff06a3;color:#fff;}
 .pagoBtn-on{background:linear-gradient(90deg,#ff06a3,#fb0000);border-color:transparent;color:#fff;font-weight:700;}
@@ -69,11 +74,11 @@ body{background:var(--bg);min-height:100vh;font-family:var(--body);color:#fff;pa
 .tag{background:rgba(255,255,255,0.08);color:var(--muted);border-radius:999px;padding:3px 10px;font-size:12px;}
 .iconBtn{background:transparent;border:none;color:#8A79A6;cursor:pointer;padding:4px;font-size:16px;}
 .rankRow{display:flex;align-items:center;gap:14px;padding:14px;border-radius:12px;margin-bottom:8px;}
-.rankPos{width:30px;text-align:center;font-family:var(--display);font-size:18px;font-weight:600;}
+.rankPos{width:30px;text-align:center;font-family:var(--display);font-size:17px;font-weight:700;}
 .bar{background:rgba(255,255,255,0.08);border-radius:999px;height:8px;overflow:hidden;}
 .bar>span{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,#ff06a3,#fb0000);}
 .metric .l{color:var(--muted);font-size:12px;margin-bottom:2px;}
-.metric .v{font-family:var(--display);font-size:24px;color:#fff;}
+.metric .v{font-family:var(--display);font-size:24px;font-weight:700;color:#fff;}
 iframe{background:#000;}
 </style>
 </head>
@@ -137,23 +142,57 @@ const OPEN_KEY = "2026-08-25";
 const START_KEY = "2026-08-26";
 const DEFAULT_ACTIVITIES = ["Gravar o vídeo do dia", "Editar e publicar", "Interagir com a audiência"];
 const EXTRA_ACTIVITIES = [
-  "Escrever roteiro (corrido ou em tópicos)",
-  "Gravar o vídeo",
-  "Postar o vídeo",
-  "Postar 1x ao dia",
-  "Postar 2x ao dia",
-  "Postar 3x no dia",
-  "Responder comentários de um vídeo novo",
-  "Responder comentários de um vídeo antigo",
-  "Escrever 3 variações da mesma pauta antes de gravar",
-  "Gravar as variações de uma pauta",
-  "Fazer um vídeo sugerido pela ferramenta do Creator Search Insights",
-  "Pesquisar 3 novos conteúdos no dia",
-  "Postar 1 story no TikTok",
-  "Gerar 1 roteiro com a Lyrinha IA",
-  "Abrir uma live de 1 hora conversando com seu público em 1 dia",
-  "Analisar as suas métricas da semana"
+  {t:"Escrever roteiro (corrido ou em tópicos)",p:0},
+  {t:"Gravar o vídeo",p:0},
+  {t:"Postar o vídeo",p:0},
+  {t:"Postar 1x ao dia",p:0},
+  {t:"Postar 2x ao dia",p:0},
+  {t:"Postar 3x no dia",p:0},
+  {t:"Responder comentários de um vídeo novo",p:0},
+  {t:"Responder comentários de um vídeo antigo",p:0},
+  {t:"Escrever 3 variações da mesma pauta antes de gravar",p:0},
+  {t:"Gravar as variações de uma pauta",p:0},
+  {t:"Fazer um vídeo sugerido pela ferramenta do Creator Search Insights",p:0},
+  {t:"Pesquisar 3 novos conteúdos no dia",p:0},
+  {t:"Postar 1 story no TikTok",p:0},
+  {t:"Gerar 1 roteiro com a Lyrinha IA",p:0},
+  {t:"Abrir uma live de 1 hora conversando com seu público em 1 dia",p:0},
+  {t:"Analisar as suas métricas da semana",p:0},
+  {t:"Criar 10 headlines para uma mesma pauta",p:10},
+  {t:"Testar 2 headlines diferentes para a mesma pauta",p:15},
+  {t:"Refazer um vídeo antigo que teve baixo desempenho",p:15},
+  {t:"Regravar um vídeo que performou bem com um novo gancho",p:20},
+  {t:"Criar uma continuação, ou parte 2, de um vídeo",p:10},
+  {t:"Transformar um comentário em vídeo",p:15},
+  {t:"Criar um vídeo respondendo uma dúvida frequente da audiência",p:10},
+  {t:"Criar um vídeo baseado em uma busca do TikTok",p:15},
+  {t:"Criar conteúdo sobre um assunto em alta do seu nicho",p:15},
+  {t:"Criar um conteúdo de opinião ou posicionamento",p:15},
+  {t:"Criar um conteúdo contando uma história pessoal ligada ao nicho",p:15},
+  {t:"Criar um vídeo com chamada explícita para comentar",p:10},
+  {t:"Criar um vídeo com chamada explícita para seguir",p:10},
+  {t:"Criar um vídeo com chamada para conversão ou venda",p:15},
+  {t:"Fazer um vídeo de até 30 segundos",p:10},
+  {t:"Fazer um vídeo de mais de 60 segundos com retenção pensada",p:15},
+  {t:"Testar um formato que nunca usou",p:20},
+  {t:"Testar uma nova forma de edição",p:10},
+  {t:"Gravar fora do cenário habitual",p:10},
+  {t:"Fazer um vídeo sem roteiro escrito",p:10},
+  {t:"Fazer um vídeo usando storytelling",p:15},
+  {t:"Fazer uma série com pelo menos 3 episódios",p:30},
+  {t:"Comentar estrategicamente em 10 perfis do mesmo nicho",p:10},
+  {t:"Responder todos os comentários recebidos naquele dia",p:15},
+  {t:"Fazer uma pergunta para a audiência e usar as respostas como pauta",p:10},
+  {t:"Salvar 10 referências de conteúdo do nicho",p:10},
+  {t:"Analisar 3 vídeos virais do seu nicho e identificar o gancho",p:15},
+  {t:"Identificar seus 3 melhores vídeos dos últimos 30 dias",p:10},
+  {t:"Identificar o padrão dos seus 3 melhores vídeos",p:15},
+  {t:"Escolher um vídeo campeão e criar 3 derivados dele",p:25},
+  {t:"Comparar retenção de 3 vídeos publicados",p:15},
+  {t:"Revisar bio, foto e posicionamento do perfil",p:20},
+  {t:"Fixar estrategicamente 3 vídeos no perfil",p:10}
 ];
+const BASICAS = 16;
 const DEFAULT_PRIZES = [
   "Primeiro lugar:",
   "1 microfone Hollyland ou um tripé Ulanzi de MagSafe ou uma luz de led da Ulanzi para iluminar os vídeos",
@@ -196,7 +235,7 @@ const state = {
   config:{}, participants:{}, days:{}, videos:[], insights:[], backstage:[], vents:[],
   me: null, uid: null, master:false,
   authMode:"login", authBusy:false, authError:null, authNotice:null,
-  bsBusy:false, bsError:null, ventBusy:false, ventNotice:null,
+  bsBusy:false, bsError:null, ventBusy:false, ventNotice:null, aberto:null,
   section:null, editingActs:false, prizesOpen:false, editingPrizes:false, extrasOpen:false,
   extras:{}, pagos:{},
   viewY: now.getFullYear(), viewM: now.getMonth(), selected: todayKey(),
@@ -384,6 +423,59 @@ app.sendVent=async()=>{
   }catch(e){ state.ventNotice="Não consegui enviar agora. Tente de novo em instantes."; }
   state.ventBusy=false;renderSection();
 };
+function baixarCSV(nome,linhas){
+  const txt=linhas.map(l=>l.map(c=>'"'+String(c==null?"":c).replace(/"/g,'""')+'"').join(";")).join("\r\n");
+  const blob=new Blob(["\ufeff"+txt],{type:"text/csv;charset=utf-8;"});
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(blob);a.download=nome;document.body.appendChild(a);a.click();
+  setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},500);
+}
+function idsOrdenados(){
+  return Object.keys(state.participants).sort((a,b)=>pointsOf(b)-pointsOf(a)
+    ||state.videos.filter(v=>v.ownerId===b).length-state.videos.filter(v=>v.ownerId===a).length);
+}
+function diasCompletos(id){return Object.values(state.days[id]||{}).filter(a=>a&&a.filter(Boolean).length===3).length;}
+app.exportResumo=()=>{
+  const linhas=[["Posição","Nome","E-mail","Pontos","Vídeos publicados","Dias completos","Extras marcadas","Bastidores","Dias marcados como pago"]];
+  idsOrdenados().forEach(function(id,i){
+    const pt=state.participants[id];
+    const extras=Object.values(state.extras[id]||{}).reduce((t,a)=>t+((a||[]).filter(Boolean).length),0);
+    linhas.push([i+1,pt.name,pt.email||"",pointsOf(id),state.videos.filter(v=>v.ownerId===id).length,
+      diasCompletos(id),extras,state.backstage.filter(b=>b.ownerId===id).length,
+      Object.values(state.pagos[id]||{}).filter(Boolean).length]);
+  });
+  baixarCSV("Desafio 50 vídeos - resumo.csv",linhas);
+};
+app.exportDetalhado=()=>{
+  const linhas=[["Nome","E-mail","Data","Tipo","Item","Pontos","Link","Situação"]];
+  idsOrdenados().forEach(function(id){
+    const pt=state.participants[id],nome=pt.name,mail=pt.email||"";
+    Object.keys(state.days[id]||{}).sort().forEach(function(k){
+      const m=(state.days[id]||{})[k]||[];
+      const acts=state.config.activities||DEFAULT_ACTIVITIES;
+      m.forEach(function(on,i){ if(on)linhas.push([nome,mail,k,"Atividade do dia",acts[i]||("Atividade "+(i+1)),"",""]); });
+    });
+    Object.keys(state.extras[id]||{}).sort().forEach(function(k){
+      ((state.extras[id]||{})[k]||[]).forEach(function(on,i){
+        if(!on||!EXTRA_ACTIVITIES[i])return;
+        const ok=diaCompleto(id,k),pp=EXTRA_ACTIVITIES[i].p;
+        linhas.push([nome,mail,k,pp?"Ação com pontos":"Extra da rotina",EXTRA_ACTIVITIES[i].t,pp?(ok?pp:0):"","",
+          pp?(ok?"Contou":"Não contou, dia incompleto"):""]);
+      });
+    });
+    state.videos.filter(v=>v.ownerId===id).sort((a,b)=>(a.date||"").localeCompare(b.date||"")).forEach(function(v){
+      linhas.push([nome,mail,(v.date||keyFromTs(v.ts)),"Vídeo publicado","","",v.link||""]);
+    });
+    state.backstage.filter(b=>b.ownerId===id).forEach(function(b){
+      linhas.push([nome,mail,(b.date||keyFromTs(b.ts)),"Bastidor enviado","","",""]);
+    });
+    Object.keys(state.pagos[id]||{}).sort().forEach(function(k){
+      if((state.pagos[id]||{})[k])linhas.push([nome,mail,k,"Dia marcado como pago","","",""]);
+    });
+  });
+  baixarCSV("Desafio 50 vídeos - detalhado.csv",linhas);
+};
+app.abrirDetalhe=(id)=>{state.aberto=(state.aberto===id?null:id);refreshSectionData();};
 app.openSection=(k)=>{state.section=(state.section===k?null:k);renderSecRow();renderSection();};
 
 /* ---------- cálculos ---------- */
@@ -393,6 +485,10 @@ const myDays=()=>state.days[state.me&&state.me.id]||{};
 const dayCount=(k)=>((myDays()[k])||[]).filter(Boolean).length;
 const myExtras=()=>state.extras[state.me&&state.me.id]||{};
 const extraCount=(k)=>((myExtras()[k])||[]).filter(Boolean).length;
+const pointsOfDay=(marks)=>(marks||[]).reduce((t,on,i)=>t+(on&&EXTRA_ACTIVITIES[i]?EXTRA_ACTIVITIES[i].p:0),0);
+const nAtividades=()=>(state.config.activities||DEFAULT_ACTIVITIES).length;
+const diaCompleto=(uid,k)=>(((state.days[uid]||{})[k])||[]).filter(Boolean).length>=nAtividades();
+const pointsOf=(uid)=>Object.keys(state.extras[uid]||{}).reduce((t,k)=>t+(diaCompleto(uid,k)?pointsOfDay(state.extras[uid][k]):0),0);
 const myPagos=()=>state.pagos[state.me&&state.me.id]||{};
 const isPago=(uid,k)=>!!((state.pagos[uid]||{})[k]);
 function dateOfKey(k){const[y,m,d]=k.split("-").map(Number);return new Date(y,m-1,d);}
@@ -471,7 +567,7 @@ function entryHTML(){
   return '<div style="max-width:460px;margin:0 auto;text-align:center;padding-top:36px;">'
     +'<img src="brand/logo.png" alt="Lyra" style="height:96px;width:auto;margin:0 auto 22px;display:block;"/>'
     +'<div class="eyebrow">Produção de conteúdo</div>'
-    +'<h1 style="font-family:var(--display);font-size:46px;color:#fff;margin:8px 0 6px;font-weight:600;line-height:1.05;">Desafio 50 vídeos</h1>'
+    +'<h1 style="font-family:var(--title);font-size:46px;color:#fff;margin:8px 0 6px;font-weight:600;line-height:1.05;">Desafio 50 vídeos</h1>'
     +'<p style="color:var(--muted);font-size:16px;margin-bottom:12px;line-height:1.5;">Cinquenta vídeos em um mês. Cada dia tem três atividades para marcar no calendário e o ritmo pode variar conforme a sua rotina.</p>'
     +'<p style="color:#fff;font-size:15px;margin:0 0 24px;line-height:1.5;">O desafio abre em '+esc(dateOfKey(OPEN_KEY).toLocaleDateString("pt-BR",{day:"2-digit",month:"long"}))+' e conta de '+esc(windowLabel())+'.</p>'
     +'<div style="text-align:left;">'
@@ -490,26 +586,27 @@ function entryHTML(){
     +'<p style="color:var(--muted);font-size:12px;margin-top:22px;line-height:1.5;">O seu progresso, os links dos vídeos e o crescimento de seguidores ficam visíveis para todas as participantes. O que você escrever no desabafo só a organização do desafio lê.</p></div>';
 }
 function mainHTML(){
-  return '<div class="topbar"><div style="display:flex;align-items:center;gap:11px;flex-wrap:wrap;">'
-    +'<img src="brand/simbolo.png" alt="Lyra" style="height:38px;width:auto;display:block;"/>'
-    +'<button onclick="app.openPrizes()" style="display:inline-flex;align-items:center;gap:6px;background:rgba(255,6,163,0.14);border:1px solid rgba(255,6,163,0.5);color:#fff;border-radius:999px;padding:7px 13px;font-family:var(--body);font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;">'
+  return '<div class="topbar"><div class="topRow">'
+    +'<img src="brand/simbolo.png" alt="Lyra" style="height:36px;width:auto;display:block;flex:none;"/>'
+    +'<button onclick="app.openPrizes()" style="display:inline-flex;align-items:center;gap:6px;background:rgba(255,6,163,0.14);border:1px solid rgba(255,6,163,0.5);color:#fff;border-radius:999px;padding:7px 13px;font-family:var(--body);font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;flex:none;">'
     +'<svg viewBox="0 0 24 24" width="15" height="15" fill="#ff06a3" style="flex:none;"><path d="M4 19h16v2H4v-2zM3 7l4.5 3.2L12 4l4.5 6.2L21 7l-1.6 10H4.6L3 7z"/></svg>'
     +'Prêmios</button>'
-    +'<div><div class="eyebrow">Desafio 50 vídeos</div>'
-    +'<div style="color:#fff;font-size:15px;">Olá, <strong>'+esc(state.me.name)+'</strong></div></div></div>'
-    +'<div style="text-align:right;"><div id="counter" style="color:#fff;font-family:var(--body);font-weight:700;font-size:16px;white-space:nowrap;"></div>'
-    +'<button class="linkBtn" style="margin-top:6px;color:var(--muted);" onclick="app.logout()">sair</button></div></div>'
+    +'<button class="linkBtn" style="color:var(--muted);flex:none;" onclick="app.logout()">sair</button></div>'
+    +'<div class="topInfo"><div class="eyebrow">Desafio 50 vídeos</div>'
+    +'<div style="color:#fff;font-size:15px;">Olá, <strong>'+esc(state.me.name)+'</strong></div>'
+    +'<div id="counter" style="color:#fff;font-family:var(--body);font-weight:700;font-size:17px;margin-top:8px;"></div></div></div>'
     +'<div class="card" id="cal"></div><div class="card" id="acts"></div>'
     +'<div class="secRow" id="secRow"></div><div id="sectionArea"></div>';
 }
 function renderCounter(){const c=byId("counter");if(!c)return;
   c.innerHTML='<div>'+myVideos().length+' de '+GOAL+' vídeos</div>'
-    +'<div style="color:var(--muted);font-size:12px;font-weight:400;margin-top:2px;">'+esc(windowLabel())+'</div>';}
+    +'<div style="color:var(--muted);font-size:12px;font-weight:400;margin-top:3px;">'+esc(windowLabel())+'</div>';}
 function renderCalendar(){
   const cal=byId("cal");if(!cal)return;
   const fd=new Date(state.viewY,state.viewM,1).getDay();
   const dim=new Date(state.viewY,state.viewM+1,0).getDate();
-  const label=new Date(state.viewY,state.viewM,1).toLocaleDateString("pt-BR",{month:"long",year:"numeric"});
+  let label=new Date(state.viewY,state.viewM,1).toLocaleDateString("pt-BR",{month:"long",year:"numeric"});
+  label=label.charAt(0).toUpperCase()+label.slice(1);
   let cells="";for(let i=0;i<fd;i++)cells+='<div></div>';
   for(let d=1;d<=dim;d++){
     const k=keyOf(state.viewY,state.viewM,d);const st=statusOf(k);
@@ -522,7 +619,7 @@ function renderCalendar(){
   }
   cal.innerHTML='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">'
     +'<button class="navBtn" onclick="app.prevMonth()">‹</button>'
-    +'<div style="font-family:var(--body);font-weight:700;font-size:18px;color:#fff;text-transform:capitalize;">'+esc(label)+'</div>'
+    +'<div style="font-family:var(--body);font-weight:700;font-size:18px;color:#fff;text-align:center;">'+esc(label)+'</div>'
     +'<button class="navBtn" onclick="app.nextMonth()">›</button></div>'
     +'<div class="calGrid" style="margin-bottom:4px;">'+WEEK.map(w=>'<div class="weekhead">'+w+'</div>').join("")+'</div>'
     +'<div class="calGrid">'+cells+'</div>';
@@ -544,9 +641,14 @@ function renderActivities(){
       +'<div class="checkbox '+(on?"checkbox-on":"")+'">'+(on?"✓":"")+'</div><span>'+esc(a)+'</span></div>';
   });
   const ec=extraCount(state.selected);
+  const completo=diaCompleto(state.me&&state.me.id,state.selected);
+  const ep=completo?pointsOfDay(myExtras()[state.selected]):0;
   el.innerHTML=rows
     +'<button class="extraBtn" onclick="app.openExtras()"><span style="display:inline-flex;align-items:center;gap:9px;"><svg viewBox="0 0 24 24" width="17" height="17" fill="#ff06a3" style="flex:none;"><path d="M12 2.6l2.9 5.9 6.5.9-4.7 4.6 1.1 6.5L12 17.4 6.2 20.5l1.1-6.5L2.6 9.4l6.5-.9L12 2.6z"/></svg>Atividades extras</span>'
-    +(ec?'<span class="extraCount">'+ec+'</span>':'<span style="color:var(--muted);font-size:20px;line-height:1;">›</span>')+'</button>'
+    +(ec?'<span style="display:inline-flex;align-items:center;gap:8px;"><span class="extraCount">'+ec+'</span>'
+      +(ep?'<span class="ptsTag">'+ep+' pontos</span>':'')
+      +(!completo&&pointsOfDay(myExtras()[state.selected])?'<span class="ptsTag" style="background:rgba(255,255,255,0.08);color:var(--muted);">em espera</span>':'')+'</span>'
+      :'<span style="color:var(--muted);font-size:20px;line-height:1;">›</span>')+'</button>'
     +(state.master?'<button class="linkBtn" style="margin-top:2px;" onclick="app.editActs()">editar as atividades</button>':"");
 }
 function renderSecRow(){
@@ -608,7 +710,12 @@ function renderSection(){
       +'<div class="card"><h2 class="cardTitle">Bastidores da turma</h2><div id="bsData"></div></div>';
   }
   else if(state.section==="org"&&state.master){
-    el.innerHTML='<div class="card"><h2 class="cardTitle">Pontuação de cada participante</h2><div id="orgData"></div></div>'
+    el.innerHTML='<div class="card"><h2 class="cardTitle">Pontuação de cada participante</h2>'
+      +'<p style="color:var(--muted);font-size:13px;line-height:1.5;margin:6px 0 14px;">Toque no nome de alguém para ver dia a dia o que foi marcado, com os links dos vídeos para conferência.</p>'
+      +'<div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:16px;">'
+      +'<button class="btn-ghost" onclick="app.exportResumo()">Baixar resumo</button>'
+      +'<button class="btn-ghost" onclick="app.exportDetalhado()">Baixar relatório detalhado</button></div>'
+      +'<div id="orgData"></div></div>'
       +'<div class="card"><h2 class="cardTitle">Desabafos</h2><div id="ventData"></div></div>';
   }
   else{ el.innerHTML=""; return; }
@@ -625,7 +732,7 @@ function refreshSectionData(){
         +'<div style="flex:1;"><div style="color:#fff;margin-bottom:4px;">'+esc(p.name)+(me?' <span class="tag">você</span>':"")+'</div>'
         +'<div style="color:var(--muted);font-size:12px;margin-bottom:6px;">'+p.greenDays+' dias concluídos</div>'
         +'<div class="bar"><span style="width:'+pct+'%"></span></div></div>'
-        +'<div style="font-family:var(--display);font-size:22px;color:#fff;width:44px;text-align:right;">'+p.count+'</div></div>';
+        +'<div style="font-family:var(--display);font-weight:700;font-size:21px;color:#fff;width:44px;text-align:right;">'+p.count+'</div></div>';
     }).join("");
   }
   else if(state.section==="videos"){const el=byId("galData");if(!el)return;
@@ -664,22 +771,23 @@ function refreshSectionData(){
       const linhas=Object.keys(state.participants).map(function(id){
         const dias=Object.values(state.days[id]||{}).filter(a=>a&&a.filter(Boolean).length===3).length;
         const extras=Object.values(state.extras[id]||{}).reduce((t,a)=>t+((a||[]).filter(Boolean).length),0);
-        return {nome:state.participants[id].name,email:state.participants[id].email||"",
-          videos:state.videos.filter(v=>v.ownerId===id).length,dias:dias,extras:extras,
+        return {id:id,nome:state.participants[id].name,email:state.participants[id].email||"",
+          videos:state.videos.filter(v=>v.ownerId===id).length,dias:dias,extras:extras,pontos:pointsOf(id),
           bastidores:state.backstage.filter(b=>b.ownerId===id).length,
           pagos:Object.values(state.pagos[id]||{}).filter(Boolean).length};
-      }).sort((a,b)=>b.videos-a.videos||b.dias-a.dias||a.nome.localeCompare(b.nome));
+      }).sort((a,b)=>b.pontos-a.pontos||b.videos-a.videos||a.nome.localeCompare(b.nome));
       od.innerHTML=linhas.length?linhas.map(function(l){
-        return '<div class="row" style="flex-wrap:wrap;">'
+        return '<div class="row" style="flex-wrap:wrap;cursor:pointer;" onclick="app.abrirDetalhe(\''+l.id+'\')">'
           +'<div><div style="color:#fff;font-size:15px;">'+esc(l.nome)+'</div>'
           +'<div style="color:var(--muted);font-size:12px;">'+esc(l.email)+'</div></div>'
           +'<div style="display:flex;gap:16px;flex-wrap:wrap;color:var(--muted);font-size:12px;text-align:right;">'
-          +'<div><div>vídeos</div><div style="color:#fff;font-size:16px;font-family:var(--display);">'+l.videos+'</div></div>'
-          +'<div><div>dias completos</div><div style="color:#fff;font-size:16px;font-family:var(--display);">'+l.dias+'</div></div>'
-          +'<div><div>extras</div><div style="color:#fff;font-size:16px;font-family:var(--display);">'+l.extras+'</div></div>'
-          +'<div><div>bastidores</div><div style="color:#fff;font-size:16px;font-family:var(--display);">'+l.bastidores+'</div></div>'
-          +'<div><div>dias pagos</div><div style="color:#fff;font-size:16px;font-family:var(--display);">'+l.pagos+'</div></div>'
-          +'</div></div>';
+          +'<div><div>vídeos</div><div style="color:#fff;font-size:16px;font-weight:700;font-family:var(--display);">'+l.videos+'</div></div>'
+          +'<div><div>dias completos</div><div style="color:#fff;font-size:16px;font-weight:700;font-family:var(--display);">'+l.dias+'</div></div>'
+          +'<div><div>extras</div><div style="color:#fff;font-size:16px;font-weight:700;font-family:var(--display);">'+l.extras+'</div></div>'
+          +'<div><div>pontos</div><div style="color:#ff06a3;font-size:16px;font-weight:700;font-family:var(--display);">'+l.pontos+'</div></div>'
+          +'<div><div>bastidores</div><div style="color:#fff;font-size:16px;font-weight:700;font-family:var(--display);">'+l.bastidores+'</div></div>'
+          +'<div><div>dias pagos</div><div style="color:#fff;font-size:16px;font-weight:700;font-family:var(--display);">'+l.pagos+'</div></div>'
+          +'</div></div>'+(state.aberto===l.id?detalheHTML(l.id):"");
       }).join(""):'<p style="color:var(--muted);">Ninguém entrou no desafio ainda.</p>';
     }
     const vd=byId("ventData");
@@ -712,6 +820,39 @@ function refreshSectionData(){
 }
 
 /* ---------- celebração ---------- */
+function detalheHTML(id){
+  const acts=state.config.activities||DEFAULT_ACTIVITIES;
+  const dias={};
+  const guarda=(k)=>{if(!dias[k])dias[k]={acts:[],extras:[],videos:[],bastidor:0,pago:false};return dias[k];};
+  Object.keys(state.days[id]||{}).forEach(function(k){
+    ((state.days[id]||{})[k]||[]).forEach(function(on,i){ if(on)guarda(k).acts.push(acts[i]||("Atividade "+(i+1))); });
+  });
+  Object.keys(state.extras[id]||{}).forEach(function(k){
+    ((state.extras[id]||{})[k]||[]).forEach(function(on,i){ if(on&&EXTRA_ACTIVITIES[i])guarda(k).extras.push(EXTRA_ACTIVITIES[i]); });
+  });
+  state.videos.filter(v=>v.ownerId===id).forEach(function(v){ guarda(v.date||keyFromTs(v.ts)).videos.push(v); });
+  state.backstage.filter(b=>b.ownerId===id).forEach(function(b){ guarda(b.date||keyFromTs(b.ts)).bastidor++; });
+  Object.keys(state.pagos[id]||{}).forEach(function(k){ if((state.pagos[id]||{})[k])guarda(k).pago=true; });
+  const chaves=Object.keys(dias).sort();
+  if(!chaves.length)return '<div style="padding:12px 2px 18px;color:var(--muted);font-size:13px;">Nada marcado até agora.</div>';
+  return '<div style="padding:6px 2px 18px;">'+chaves.map(function(k){
+    const d=dias[k];
+    const ok=diaCompleto(id,k);
+    const pts=ok?d.extras.reduce((t,a)=>t+a.p,0):0;
+    const espera=ok?0:d.extras.reduce((t,a)=>t+a.p,0);
+    let linha='<div style="border-left:2px solid rgba(255,6,163,0.4);padding:8px 0 8px 12px;margin-bottom:10px;">'
+      +'<div style="display:flex;justify-content:space-between;gap:10px;align-items:center;margin-bottom:6px;">'
+      +'<strong style="color:#fff;font-size:14px;">'+esc(fmtShort(k))+'</strong>'
+      +(pts?'<span class="ptsTag">'+pts+' pontos</span>':'')
+      +(espera?'<span class="ptsTag" style="background:rgba(255,255,255,0.08);color:var(--muted);">'+espera+' em espera</span>':'')+'</div>';
+    if(d.acts.length)linha+='<div style="color:var(--muted);font-size:13px;line-height:1.5;">Atividades do dia: '+esc(d.acts.join(", "))+'</div>';
+    d.extras.forEach(function(a){ linha+='<div style="color:#fff;font-size:13px;line-height:1.5;">'+esc(a.t)+(a.p?' <span style="color:#ff06a3;">'+a.p+'</span>':'')+'</div>'; });
+    d.videos.forEach(function(v){ linha+='<div style="font-size:13px;line-height:1.5;"><a href="'+esc(v.link)+'" target="_blank" rel="noopener" style="color:#ff06a3;word-break:break-all;">'+esc(v.link)+'</a></div>'; });
+    if(d.bastidor)linha+='<div style="color:var(--muted);font-size:13px;">Bastidores enviados: '+d.bastidor+'</div>';
+    if(d.pago)linha+='<div style="color:#3ddc97;font-size:13px;">Marcou está pago</div>';
+    return linha+'</div>';
+  }).join("")+'</div>';
+}
 function showExtrasModal(){
   var m=byId("extrasModal");
   if(!m){
@@ -721,7 +862,7 @@ function showExtrasModal(){
     m.onclick=function(){app.closeExtras();};
     m.innerHTML='<div onclick="event.stopPropagation()" style="background:radial-gradient(600px 300px at 50% 0%,#2b0a12,#17070c);border:1px solid rgba(255,255,255,0.14);border-top-left-radius:22px;border-top-right-radius:22px;width:100%;max-width:520px;max-height:82vh;overflow:auto;padding:20px 20px 30px;box-shadow:0 -20px 60px rgba(0,0,0,0.5);">'
       +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">'
-      +'<h2 style="font-family:var(--display);font-size:24px;color:#fff;margin:0;font-weight:600;display:flex;align-items:center;gap:10px;"><svg viewBox="0 0 24 24" width="20" height="20" fill="#ff06a3"><path d="M12 2.6l2.9 5.9 6.5.9-4.7 4.6 1.1 6.5L12 17.4 6.2 20.5l1.1-6.5L2.6 9.4l6.5-.9L12 2.6z"/></svg>Atividades extras</h2>'
+      +'<h2 style="font-family:var(--display);font-size:22px;color:#fff;margin:0;font-weight:700;display:flex;align-items:center;gap:10px;"><svg viewBox="0 0 24 24" width="20" height="20" fill="#ff06a3"><path d="M12 2.6l2.9 5.9 6.5.9-4.7 4.6 1.1 6.5L12 17.4 6.2 20.5l1.1-6.5L2.6 9.4l6.5-.9L12 2.6z"/></svg>Atividades extras</h2>'
       +'<button onclick="app.closeExtras()" style="background:none;border:none;color:#d6b9c9;font-size:26px;line-height:1;cursor:pointer;padding:0 4px;">×</button></div>'
       +'<div id="extrasBody"></div></div>';
     document.body.appendChild(m);
@@ -731,11 +872,24 @@ function showExtrasModal(){
 function renderExtrasBody(){
   var el=byId("extrasBody");if(!el)return;
   var marks=(myExtras()[state.selected])||[];
-  el.innerHTML=EXTRA_ACTIVITIES.map(function(a,i){
+  var bruto=pointsOfDay(marks);
+  var completo=diaCompleto(state.me&&state.me.id,state.selected);
+  var html='<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px;">'
+    +'<span style="color:var(--muted);font-size:13px;">'+esc(fmtShort(state.selected))+'</span>'
+    +'<span class="ptsTag"'+(completo?'':' style="background:rgba(255,255,255,0.08);color:var(--muted);"')+'>'
+    +(completo?bruto+' pontos no dia':bruto+' pontos em espera')+'</span></div>'
+    +(completo?'':'<p style="color:var(--muted);font-size:13px;line-height:1.5;margin:0 0 14px;background:rgba(255,6,163,0.08);border-radius:12px;padding:10px 12px;">As ações extras só passam a valer pontos depois que as '
+      +nAtividades()+' atividades do dia estiverem marcadas. Você pode marcar agora e os pontos entram assim que o dia estiver completo.</p>');
+  html+='<div class="extraSec">Rotina do dia</div>';
+  EXTRA_ACTIVITIES.forEach(function(a,i){
+    if(i===BASICAS)html+='<div class="extraSec">Ações que valem pontos</div>';
     var on=marks[i];
-    return '<div class="check '+(on?"check-on":"")+'" onclick="app.toggleExtra('+i+')" style="align-items:flex-start;">'
-      +'<div class="checkbox '+(on?"checkbox-on":"")+'">'+(on?"✓":"")+'</div><span style="line-height:1.4;">'+esc(a)+'</span></div>';
-  }).join("");
+    html+='<div class="check '+(on?"check-on":"")+'" onclick="app.toggleExtra('+i+')" style="align-items:flex-start;">'
+      +'<div class="checkbox '+(on?"checkbox-on":"")+'">'+(on?"✓":"")+'</div>'
+      +'<span style="line-height:1.4;flex:1;">'+esc(a.t)+'</span>'
+      +(a.p?'<span class="ptsTag" style="flex:none;">'+a.p+'</span>':'')+'</div>';
+  });
+  el.innerHTML=html;
 }
 function showPrizesModal(){
   var m=byId("prizesModal");
@@ -748,7 +902,7 @@ function showPrizesModal(){
       +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">'
       +'<div style="display:flex;align-items:center;gap:9px;">'
       +'<svg viewBox="0 0 24 24" width="22" height="22" fill="#ff06a3"><path d="M4 19h16v2H4v-2zM3 7l4.5 3.2L12 4l4.5 6.2L21 7l-1.6 10H4.6L3 7z"/></svg>'
-      +'<h2 style="font-family:var(--display);font-size:24px;color:#fff;margin:0;font-weight:600;">Prêmios</h2></div>'
+      +'<h2 style="font-family:var(--display);font-size:22px;color:#fff;margin:0;font-weight:700;">Prêmios</h2></div>'
       +'<button onclick="app.closePrizes()" style="background:none;border:none;color:#d6b9c9;font-size:26px;line-height:1;cursor:pointer;padding:0 4px;">&times;</button></div>'
       +'<div id="prizesBody"></div></div>';
     document.body.appendChild(m);
@@ -766,7 +920,7 @@ function renderPrizesBody(){
     return;
   }
   var rows=prizes.map(function(p){
-    if(/:\s*$/.test(p))return '<div style="font-family:var(--display);font-size:19px;color:#ff06a3;margin:16px 0 2px;">'+esc(p.replace(/:\s*$/,""))+'</div>';
+    if(/:\s*$/.test(p))return '<div style="font-family:var(--display);font-size:15px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:#ff06a3;margin:18px 0 4px;">'+esc(p.replace(/:\s*$/,""))+'</div>';
     return '<div style="display:flex;gap:10px;align-items:flex-start;padding:12px 0;border-bottom:1px solid rgba(255,255,255,0.08);">'
     +'<svg viewBox="0 0 24 24" width="17" height="17" fill="#ff06a3" style="flex:none;margin-top:2px;"><path d="M4 19h16v2H4v-2zM3 7l4.5 3.2L12 4l4.5 6.2L21 7l-1.6 10H4.6L3 7z"/></svg>'
     +'<span style="color:#fff;font-size:15px;line-height:1.45;">'+esc(p)+'</span></div>';}).join("");
@@ -787,7 +941,7 @@ function celebrate(){
   })();
   var ov=document.createElement('div');
   ov.style.cssText='position:fixed;inset:0;z-index:100000;display:flex;align-items:center;justify-content:center;pointer-events:none;';
-  ov.innerHTML='<div style="background:rgba(23,7,12,0.96);border:1px solid rgba(255,255,255,0.14);border-radius:18px;padding:26px 30px;text-align:center;max-width:320px;box-shadow:0 20px 60px rgba(0,0,0,0.45);"><div style="font-family:Seagram,Georgia,serif;font-size:24px;color:#fff;font-weight:600;line-height:1.25;">Parabéns, você concluiu o desafio!</div></div>';
+  ov.innerHTML='<div style="background:rgba(23,7,12,0.96);border:1px solid rgba(255,255,255,0.14);border-radius:18px;padding:26px 30px;text-align:center;max-width:320px;box-shadow:0 20px 60px rgba(0,0,0,0.45);"><div style="font-family:var(--body);font-size:24px;font-weight:700;color:#fff;font-weight:600;line-height:1.25;">Parabéns, você concluiu o desafio!</div></div>';
   document.body.appendChild(ov);
   setTimeout(function(){ov.style.transition='opacity .4s';ov.style.opacity='0';setTimeout(function(){ov.remove();},400);},3200);
 }
