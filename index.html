@@ -137,7 +137,7 @@ if (recaptchaSiteKey) {
 
 /* ---------- constantes e utilidades ---------- */
 const GOAL = 50, DAYS = 30;
-/* o desafio abre em 25 de agosto de 2026 e o primeiro dia que conta é 26 de agosto */
+/* o desafio abre em 25 de agosto de 2026 e o primeiro dia que conta é 28 de agosto */
 const OPEN_KEY = "2026-08-25";
 const START_KEY = "2026-08-28";
 const DEFAULT_ACTIVITIES = ["Gravar o vídeo do dia", "Editar e publicar", "Interagir com a audiência"];
@@ -237,7 +237,7 @@ const state = {
   authMode:"login", authBusy:false, authError:null, authNotice:null,
   bsBusy:false, bsError:null, ventBusy:false, ventNotice:null, aberto:null, insightNotice:null,
   section:null, editingActs:false, prizesOpen:false, editingPrizes:false, extrasOpen:false,
-  extras:{}, pagos:{}, extraLinks:{}, insightDate:null,
+  extras:{}, pagos:{}, extraLinks:{}, actLinks:{}, insightDate:null,
   viewY: now.getFullYear(), viewM: now.getMonth(), selected: todayKey(),
   printResult:null, printBusy:false, printError:null,
 };
@@ -249,7 +249,7 @@ window.app = app;
 function listen(){
   onSnapshot(doc(db,"config","main"),(s)=>{state.config=s.exists()?s.data():{};renderCalendar();renderActivities();renderCounter();refreshSectionData();if(state.prizesOpen&&!state.editingPrizes)renderPrizesBody();});
   onSnapshot(collection(db,"participants"),(qs)=>{const m={};qs.forEach(d=>m[d.id]=d.data());state.participants=m;renderCounter();refreshSectionData();});
-  onSnapshot(collection(db,"days"),(qs)=>{const m={},e={},g={},L={};qs.forEach(d=>{m[d.id]=(d.data().marks)||{};e[d.id]=(d.data().extras)||{};g[d.id]=(d.data().pagos)||{};L[d.id]=(d.data().extraLinks)||{};});state.days=m;state.extras=e;state.pagos=g;state.extraLinks=L;renderCalendar();renderActivities();if(state.extrasOpen)renderExtrasBody();refreshSectionData();});
+  onSnapshot(collection(db,"days"),(qs)=>{const m={},e={},g={},L={},A={};qs.forEach(d=>{m[d.id]=(d.data().marks)||{};e[d.id]=(d.data().extras)||{};g[d.id]=(d.data().pagos)||{};L[d.id]=(d.data().extraLinks)||{};A[d.id]=(d.data().actLinks)||{};});state.days=m;state.extras=e;state.pagos=g;state.extraLinks=L;state.actLinks=A;renderCalendar();renderActivities();if(state.extrasOpen)renderExtrasBody();refreshSectionData();});
   onSnapshot(collection(db,"videos"),(qs)=>{const a=[];qs.forEach(d=>a.push(Object.assign({id:d.id},d.data())));state.videos=a;renderCalendar();renderCounter();refreshSectionData();});
   onSnapshot(collection(db,"insights"),(qs)=>{const a=[];qs.forEach(d=>a.push(Object.assign({id:d.id},d.data())));state.insights=a;refreshSectionData();});
   onSnapshot(collection(db,"backstage"),(qs)=>{const a=[];qs.forEach(d=>a.push(Object.assign({id:d.id},d.data())));state.backstage=a;refreshSectionData();});
@@ -325,6 +325,14 @@ app.saveExtraLink=async(idx,el)=>{
   if(v)doDia[String(idx)]=v; else delete doDia[String(idx)];
   todos[k]=doDia;state.extraLinks[state.me.id]=todos;
   await setDoc(doc(db,"days",state.me.id),{extraLinks:todos},{merge:true});
+};
+app.saveActLink=async(idx,el)=>{
+  const k=state.selected,v=(el.value||"").trim();
+  const todos=Object.assign({},state.actLinks[state.me.id]||{});
+  const doDia=Object.assign({},todos[k]||{});
+  if(v)doDia[String(idx)]=v; else delete doDia[String(idx)];
+  todos[k]=doDia;state.actLinks[state.me.id]=todos;
+  await setDoc(doc(db,"days",state.me.id),{actLinks:todos},{merge:true});
 };
 app.editActs=()=>{state.editingActs=true;renderActivities();};
 app.cancelActs=()=>{state.editingActs=false;renderActivities();};
@@ -466,7 +474,7 @@ app.exportDetalhado=()=>{
     Object.keys(state.days[id]||{}).sort().forEach(function(k){
       const m=(state.days[id]||{})[k]||[];
       const acts=state.config.activities||DEFAULT_ACTIVITIES;
-      m.forEach(function(on,i){ if(on)linhas.push([nome,mail,k,"Atividade do dia",acts[i]||("Atividade "+(i+1)),"",""]); });
+      m.forEach(function(on,i){ if(on)linhas.push([nome,mail,k,"Atividade do dia",acts[i]||("Atividade "+(i+1)),"",linkAto(id,k,i),""]); });
     });
     Object.keys(state.extras[id]||{}).sort().forEach(function(k){
       ((state.extras[id]||{})[k]||[]).forEach(function(on,i){
@@ -477,13 +485,13 @@ app.exportDetalhado=()=>{
       });
     });
     state.videos.filter(v=>v.ownerId===id).sort((a,b)=>(a.date||"").localeCompare(b.date||"")).forEach(function(v){
-      linhas.push([nome,mail,(v.date||keyFromTs(v.ts)),"Vídeo publicado","","",v.link||""]);
+      linhas.push([nome,mail,(v.date||keyFromTs(v.ts)),"Vídeo publicado","","",v.link||"",""]);
     });
     state.backstage.filter(b=>b.ownerId===id).forEach(function(b){
-      linhas.push([nome,mail,(b.date||keyFromTs(b.ts)),"Bastidor enviado","","",""]);
+      linhas.push([nome,mail,(b.date||keyFromTs(b.ts)),"Bastidor enviado","","","",""]);
     });
     Object.keys(state.pagos[id]||{}).sort().forEach(function(k){
-      if((state.pagos[id]||{})[k])linhas.push([nome,mail,k,"Dia marcado como pago","","",""]);
+      if((state.pagos[id]||{})[k])linhas.push([nome,mail,k,"Dia marcado como pago","","","",""]);
     });
   });
   baixarCSV("Desafio 50 vídeos - detalhado.csv",linhas);
@@ -505,6 +513,7 @@ const pointsOf=(uid)=>Object.keys(state.extras[uid]||{}).reduce((t,k)=>t+(diaCom
 const myPagos=()=>state.pagos[state.me&&state.me.id]||{};
 const myExtraLinks=()=>state.extraLinks[state.me&&state.me.id]||{};
 const linkDe=(uid,k,i)=>(((state.extraLinks[uid]||{})[k])||{})[String(i)]||"";
+const linkAto=(uid,k,i)=>(((state.actLinks[uid]||{})[k])||{})[String(i)]||"";
 const isPago=(uid,k)=>!!((state.pagos[uid]||{})[k]);
 function dateOfKey(k){const[y,m,d]=k.split("-").map(Number);return new Date(y,m-1,d);}
 function startKey(){return START_KEY;}
@@ -661,6 +670,9 @@ function renderActivities(){
   let rows="";acts.forEach((a,i)=>{const on=marks[i];
     rows+='<div class="check '+(on?"check-on":"")+'" onclick="app.toggle('+i+')">'
       +'<div class="checkbox '+(on?"checkbox-on":"")+'">'+(on?"✓":"")+'</div><span>'+esc(a)+'</span></div>';
+    if(on)rows+='<div style="margin:-4px 0 12px;padding-left:4px;">'
+      +'<input class="field" id="ak'+i+'" placeholder="Cole aqui o link que comprova" value="'+esc(linkAto(state.me&&state.me.id,state.selected,i))+'" '
+      +'onclick="event.stopPropagation()" onchange="app.saveActLink('+i+',this)" onblur="app.saveActLink('+i+',this)" style="font-size:13px;"/></div>';
   });
   const ec=extraCount(state.selected);
   const completo=diaCompleto(state.me&&state.me.id,state.selected);
@@ -855,7 +867,7 @@ function detalheHTML(id){
   const dias={};
   const guarda=(k)=>{if(!dias[k])dias[k]={acts:[],extras:[],videos:[],bastidor:0,pago:false};return dias[k];};
   Object.keys(state.days[id]||{}).forEach(function(k){
-    ((state.days[id]||{})[k]||[]).forEach(function(on,i){ if(on)guarda(k).acts.push(acts[i]||("Atividade "+(i+1))); });
+    ((state.days[id]||{})[k]||[]).forEach(function(on,i){ if(on)guarda(k).acts.push({t:acts[i]||("Atividade "+(i+1)),link:linkAto(id,k,i)}); });
   });
   Object.keys(state.extras[id]||{}).forEach(function(k){
     ((state.extras[id]||{})[k]||[]).forEach(function(on,i){ if(on&&EXTRA_ACTIVITIES[i])guarda(k).extras.push({t:EXTRA_ACTIVITIES[i].t,p:EXTRA_ACTIVITIES[i].p,link:linkDe(id,k,i)}); });
@@ -875,7 +887,8 @@ function detalheHTML(id){
       +'<strong style="color:#fff;font-size:14px;">'+esc(fmtShort(k))+'</strong>'
       +(pts?'<span class="ptsTag">'+pts+' pontos</span>':'')
       +(espera?'<span class="ptsTag" style="background:rgba(255,255,255,0.08);color:var(--muted);">'+espera+' em espera</span>':'')+'</div>';
-    if(d.acts.length)linha+='<div style="color:var(--muted);font-size:13px;line-height:1.5;">Atividades do dia: '+esc(d.acts.join(", "))+'</div>';
+    d.acts.forEach(function(a){ linha+='<div style="color:var(--muted);font-size:13px;line-height:1.5;">'+esc(a.t)
+      +(a.link?' <a href="'+esc(a.link)+'" target="_blank" rel="noopener" style="color:#ff06a3;word-break:break-all;">'+esc(a.link)+'</a>':'')+'</div>'; });
     d.extras.forEach(function(a){ linha+='<div style="color:#fff;font-size:13px;line-height:1.5;">'+esc(a.t)+(a.p?' <span style="color:#ff06a3;">'+a.p+'</span>':'')
       +(a.link?' <a href="'+esc(a.link)+'" target="_blank" rel="noopener" style="color:#ff06a3;word-break:break-all;">'+esc(a.link)+'</a>':(a.p?' <span style="color:var(--muted);">sem link</span>':''))+'</div>'; });
     d.videos.forEach(function(v){ linha+='<div style="font-size:13px;line-height:1.5;"><a href="'+esc(v.link)+'" target="_blank" rel="noopener" style="color:#ff06a3;word-break:break-all;">'+esc(v.link)+'</a></div>'; });
