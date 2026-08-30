@@ -146,18 +146,18 @@ const EXTRA_ACTIVITIES = [
   {t:"Gravar o vídeo",p:0},
   {t:"Postar o vídeo",p:0},
   {t:"Postar 1x ao dia",p:0},
-  {t:"Postar 2x ao dia",p:0},
-  {t:"Postar 3x no dia",p:0},
-  {t:"Responder comentários de um vídeo novo",p:0},
-  {t:"Responder comentários de um vídeo antigo",p:0},
-  {t:"Escrever 3 variações da mesma pauta antes de gravar",p:0},
-  {t:"Gravar as variações de uma pauta",p:0},
-  {t:"Fazer um vídeo sugerido pela ferramenta do Creator Search Insights",p:0},
-  {t:"Pesquisar 3 novos conteúdos no dia",p:0},
-  {t:"Postar 1 story no TikTok",p:0},
-  {t:"Gerar 1 roteiro com a Lyrinha IA",p:0},
-  {t:"Abrir uma live de 1 hora conversando com seu público em 1 dia",p:0},
-  {t:"Analisar as suas métricas da semana",p:0},
+  {t:"Postar 2x ao dia",p:10},
+  {t:"Postar 3x no dia",p:15},
+  {t:"Responder comentários de um vídeo novo",p:5},
+  {t:"Responder comentários de um vídeo antigo",p:5},
+  {t:"Escrever 3 variações da mesma pauta antes de gravar",p:10},
+  {t:"Gravar as variações de uma pauta",p:10},
+  {t:"Fazer um vídeo sugerido pela ferramenta do Creator Search Insights",p:10},
+  {t:"Pesquisar 3 novos conteúdos no dia",p:5},
+  {t:"Postar 1 story no TikTok",p:5},
+  {t:"Gerar 1 roteiro com a Lyrinha IA",p:5},
+  {t:"Abrir uma live de 1 hora conversando com seu público em 1 dia",p:20},
+  {t:"Analisar as suas métricas da semana",p:10},
   {t:"Criar 10 headlines para uma mesma pauta",p:10},
   {t:"Testar 2 headlines diferentes para a mesma pauta",p:15},
   {t:"Refazer um vídeo antigo que teve baixo desempenho",p:15},
@@ -193,6 +193,8 @@ const EXTRA_ACTIVITIES = [
   {t:"Fixar estrategicamente 3 vídeos no perfil",p:10}
 ];
 const BASICAS = 16;
+/* pontos que a participante ganha por fechar as 3 atividades de um dia */
+const PONTOS_DIA = 25;
 const DEFAULT_PRIZES = [
   "Primeiro lugar:",
   "1 microfone Hollyland ou um tripé Ulanzi de MagSafe ou uma luz de led da Ulanzi para iluminar os vídeos",
@@ -530,6 +532,7 @@ app.exportDetalhado=()=>{
     Object.keys(state.days[id]||{}).sort().forEach(function(k){
       const m=(state.days[id]||{})[k]||[];
       const acts=state.config.activities||DEFAULT_ACTIVITIES;
+      if(diaCompleto(id,k))linhas.push([nome,mail,k,"Dia completo","As 3 atividades do dia",PONTOS_DIA,"","Contou"]);
       m.forEach(function(on,i){ if(!on)return;const nf=provasDe(id,k,"act",i).length;
         linhas.push([nome,mail,k,"Atividade do dia",acts[i]||("Atividade "+(i+1)),"",
           linkAto(id,k,i)+(nf?(linkAto(id,k,i)?"\n":"")+nf+" imagem(ns) anexada(s)":""),""]); });
@@ -558,6 +561,20 @@ app.exportDetalhado=()=>{
 };
 app.abrirDetalhe=(id)=>{state.aberto=(state.aberto===id?null:id);refreshSectionData();};
 app.openSection=(k)=>{state.section=(state.section===k?null:k);renderSecRow();renderSection();};
+app.recarregar=()=>{location.reload();};
+/* quando o aplicativo volta do segundo plano, a conexão com o banco pode ter caído
+   no celular, então redesenhamos tudo e, se nada tiver chegado, buscamos de novo */
+let voltouEm=0;
+function aoVoltar(){
+  if(!state.me)return;
+  const agora=Date.now();
+  if(agora-voltouEm<1500)return;
+  voltouEm=agora;
+  renderCounter();renderCalendar();renderActivities();refreshSectionData();
+}
+document.addEventListener("visibilitychange",function(){ if(!document.hidden)aoVoltar(); });
+window.addEventListener("focus",aoVoltar);
+window.addEventListener("online",aoVoltar);
 
 /* ---------- cálculos ---------- */
 const myVideos=()=>state.videos.filter(v=>v.ownerId===(state.me&&state.me.id));
@@ -569,7 +586,15 @@ const extraCount=(k)=>((myExtras()[k])||[]).filter(Boolean).length;
 const pointsOfDay=(marks)=>(marks||[]).reduce((t,on,i)=>t+(on&&EXTRA_ACTIVITIES[i]?EXTRA_ACTIVITIES[i].p:0),0);
 const nAtividades=()=>(state.config.activities||DEFAULT_ACTIVITIES).length;
 const diaCompleto=(uid,k)=>(((state.days[uid]||{})[k])||[]).filter(Boolean).length>=nAtividades();
-const pointsOf=(uid)=>Object.keys(state.extras[uid]||{}).reduce((t,k)=>t+(diaCompleto(uid,k)?pointsOfDay(state.extras[uid][k]):0),0);
+const pointsOf=(uid)=>{
+  const chaves={};
+  Object.keys(state.days[uid]||{}).forEach(k=>chaves[k]=1);
+  Object.keys(state.extras[uid]||{}).forEach(k=>chaves[k]=1);
+  return Object.keys(chaves).reduce(function(t,k){
+    if(!diaCompleto(uid,k))return t;
+    return t+PONTOS_DIA+pointsOfDay((state.extras[uid]||{})[k]);
+  },0);
+};
 const myPagos=()=>state.pagos[state.me&&state.me.id]||{};
 const myExtraLinks=()=>state.extraLinks[state.me&&state.me.id]||{};
 const linkDe=(uid,k,i)=>(((state.extraLinks[uid]||{})[k])||{})[String(i)]||"";
@@ -616,8 +641,8 @@ function ranking(){
   return Object.keys(state.participants).map(id=>{
     const g=Object.values(state.days[id]||{}).filter(a=>a&&a.filter(Boolean).length===3).length;
     const count=state.videos.filter(v=>v.ownerId===id).length;
-    return {id,name:state.participants[id].name,count,greenDays:g};
-  }).sort((a,b)=>b.count-a.count||b.greenDays-a.greenDays||a.name.localeCompare(b.name));
+    return {id,name:state.participants[id].name,count,greenDays:g,pontos:pointsOf(id)};
+  }).sort((a,b)=>b.pontos-a.pontos||b.count-a.count||b.greenDays-a.greenDays||a.name.localeCompare(b.name));
 }
 function gallery(){return state.videos.slice().sort((a,b)=>b.ts-a.ts);}
 function growthBoard(){
@@ -701,7 +726,9 @@ function mainHTML(){
     +'<div class="secRow" id="secRow"></div><div id="sectionArea"></div>';
 }
 function renderCounter(){const c=byId("counter");if(!c)return;
-  c.innerHTML='<div>'+myVideos().length+' de '+GOAL+' vídeos</div>'
+  c.innerHTML='<div style="display:flex;align-items:center;justify-content:center;gap:10px;">'
+    +'<span>'+myVideos().length+' de '+GOAL+' vídeos</span>'
+    +'<button onclick="app.recarregar()" title="Atualizar" style="background:transparent;border:1px solid var(--border);border-radius:999px;color:var(--muted);width:26px;height:26px;line-height:1;cursor:pointer;padding:0;font-size:14px;">↻</button></div>'
     +'<div style="color:var(--muted);font-size:12px;font-weight:400;margin-top:3px;">'+esc(windowLabel())+'</div>';}
 function renderCalendar(){
   const cal=byId("cal");if(!cal)return;
@@ -749,7 +776,7 @@ function renderActivities(){
   });
   const ec=extraCount(state.selected);
   const completo=diaCompleto(state.me&&state.me.id,state.selected);
-  const ep=completo?pointsOfDay(myExtras()[state.selected]):0;
+  const ep=completo?pointsOfDay(myExtras()[state.selected])+PONTOS_DIA:0;
   el.innerHTML=rows
     +'<button class="extraBtn" onclick="app.openExtras()"><span style="display:inline-flex;align-items:center;gap:9px;"><svg viewBox="0 0 24 24" width="17" height="17" fill="#ff06a3" style="flex:none;"><path d="M12 2.6l2.9 5.9 6.5.9-4.7 4.6 1.1 6.5L12 17.4 6.2 20.5l1.1-6.5L2.6 9.4l6.5-.9L12 2.6z"/></svg>Atividades extras</span>'
     +(ec?'<span style="display:inline-flex;align-items:center;gap:8px;"><span class="extraCount">'+ec+'</span>'
@@ -766,7 +793,9 @@ function renderSecRow(){
 }
 function renderSection(){
   const el=byId("sectionArea");if(!el)return;
-  if(state.section==="ranking"){el.innerHTML='<div class="card"><h2 class="cardTitle">Ranking geral</h2><div id="rankData"></div></div>';}
+  if(state.section==="ranking"){el.innerHTML='<div class="card"><h2 class="cardTitle">Ranking geral</h2>'
+    +'<p style="color:var(--muted);font-size:13px;line-height:1.5;margin:6px 0 14px;">A ordem é pela pontuação. Cada dia com as 3 atividades marcadas vale '+PONTOS_DIA+' pontos, e é também o que libera os pontos das ações extras daquele dia. Em caso de empate, quem publicou mais vídeos fica na frente.</p>'
+    +'<div id="rankData"></div></div>';}
   else if(state.section==="videos"){
     el.innerHTML='<div class="card"><input class="field" id="vLink" placeholder="Link do Instagram, TikTok ou YouTube" style="margin-bottom:12px;"/>'
       +'<button class="btn-primary" onclick="app.addVideo()">Adicionar vídeo</button>'
@@ -848,10 +877,10 @@ function refreshSectionData(){
       return '<div class="rankRow" style="'+(me?"background:rgba(255,107,157,0.10);":"")+'">'
         +'<div class="rankPos" style="color:'+medal+';">'+(i<3?"♛":(i+1))+'</div>'
         +'<div style="flex:1;"><div style="color:#fff;margin-bottom:4px;">'+esc(p.name)+(me?' <span class="tag">você</span>':"")+'</div>'
-        +'<div style="color:var(--muted);font-size:12px;margin-bottom:6px;">'+p.greenDays+' dias concluídos</div>'
+        +'<div style="color:var(--muted);font-size:12px;margin-bottom:6px;">'+p.count+' '+(p.count===1?"vídeo":"vídeos")+' · '+p.greenDays+' dias concluídos</div>'
         +'<div class="bar"><span style="width:'+pct+'%"></span></div></div>'
-        +'<div style="width:64px;text-align:right;"><div style="font-family:var(--display);font-weight:700;font-size:21px;color:#fff;line-height:1.1;">'+p.count+'</div>'
-        +'<div style="color:var(--muted);font-size:11px;">'+(p.count===1?"vídeo":"vídeos")+'</div></div></div>';
+        +'<div style="width:64px;text-align:right;"><div style="font-family:var(--display);font-weight:700;font-size:21px;color:#ff06a3;line-height:1.1;">'+p.pontos+'</div>'
+        +'<div style="color:var(--muted);font-size:11px;">'+(p.pontos===1?"ponto":"pontos")+'</div></div></div>';
     }).join("");
   }
   else if(state.section==="videos"){const el=byId("galData");if(!el)return;
@@ -964,7 +993,7 @@ function detalheHTML(id){
   return '<div style="padding:6px 2px 18px;">'+chaves.map(function(k){
     const d=dias[k];
     const ok=diaCompleto(id,k);
-    const pts=ok?d.extras.reduce((t,a)=>t+a.p,0):0;
+    const pts=ok?d.extras.reduce((t,a)=>t+a.p,0)+PONTOS_DIA:0;
     const espera=ok?0:d.extras.reduce((t,a)=>t+a.p,0);
     let linha='<div style="border-left:2px solid rgba(255,6,163,0.4);padding:8px 0 8px 12px;margin-bottom:10px;">'
       +'<div style="display:flex;justify-content:space-between;gap:10px;align-items:center;margin-bottom:6px;">'
@@ -1003,12 +1032,12 @@ function renderExtrasBody(){
   var html='<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px;">'
     +'<span style="color:var(--muted);font-size:13px;">'+esc(fmtShort(state.selected))+'</span>'
     +'<span class="ptsTag"'+(completo?'':' style="background:rgba(255,255,255,0.08);color:var(--muted);"')+'>'
-    +(completo?bruto+' pontos no dia':bruto+' pontos em espera')+'</span></div>'
+    +(completo?(bruto+PONTOS_DIA)+' pontos no dia':bruto+' pontos em espera')+'</span></div>'
     +(completo?'':'<p style="color:var(--muted);font-size:13px;line-height:1.5;margin:0 0 14px;background:rgba(255,6,163,0.08);border-radius:12px;padding:10px 12px;">As ações extras só passam a valer pontos depois que as '
-      +nAtividades()+' atividades do dia estiverem marcadas. Você pode marcar agora e os pontos entram assim que o dia estiver completo.</p>');
+      +nAtividades()+' atividades do dia estiverem marcadas, o que por si só já vale '+PONTOS_DIA+' pontos. Você pode marcar agora e os pontos entram assim que o dia estiver completo.</p>');
   html+='<div class="extraSec">Rotina do dia</div>';
   EXTRA_ACTIVITIES.forEach(function(a,i){
-    if(i===BASICAS)html+='<div class="extraSec">Ações que valem pontos</div>';
+    if(i===BASICAS)html+='<div class="extraSec">Ações extras</div>';
     var on=marks[i];
     html+='<div class="check '+(on?"check-on":"")+'" onclick="app.toggleExtra('+i+')" style="align-items:flex-start;">'
       +'<div class="checkbox '+(on?"checkbox-on":"")+'">'+(on?"✓":"")+'</div>'
