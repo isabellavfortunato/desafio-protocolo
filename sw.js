@@ -1,6 +1,6 @@
-const CACHE = 'desafio-50-v3';
+const CACHE = 'desafio-50-v4';
 const ASSETS = [
-  './manifest.json',
+  './', './index.html', './manifest.json',
   './icons/icon-192.png', './icons/icon-512.png',
   './brand/logo.png', './brand/simbolo.png',
   './fonts/Seagram.ttf',
