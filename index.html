@@ -314,11 +314,30 @@ app.toggle=async(idx)=>{
 };
 app.openExtras=()=>{state.extrasOpen=true;showExtrasModal();};
 app.closeExtras=()=>{state.extrasOpen=false;const m=byId("extrasModal");if(m)m.remove();renderActivities();};
+/* as extras da rotina que repetem as atividades do dia: ao marcar uma delas,
+   a atividade correspondente na tela principal também é marcada */
+const ESPELHO = {1:0, 2:1, 3:1};
+/* 1 = Gravar o vídeo, que espelha a atividade 0 (gravar o vídeo do dia)
+   2 = Postar o vídeo e 3 = Postar 1x ao dia, que espelham a atividade 1 (editar e publicar) */
 app.toggleExtra=async(idx)=>{
   const k=state.selected;const cur=(state.extras[state.me.id]||{})[k]||[];
   const arr=EXTRA_ACTIVITIES.map((_,i)=>!!cur[i]);arr[idx]=!arr[idx];
   const extras=Object.assign({},state.extras[state.me.id]||{});extras[k]=arr;
-  state.extras[state.me.id]=extras;renderExtrasBody();renderActivities();
+  state.extras[state.me.id]=extras;
+  const alvo=ESPELHO[idx];
+  let marcouDia=false;
+  if(arr[idx]&&alvo!=null){
+    const dia=(state.days[state.me.id]||{})[k]||[false,false,false];
+    if(!dia[alvo]){
+      const antes=dia.filter(Boolean).length;
+      const novo=dia.slice();novo[alvo]=true;
+      const marks=Object.assign({},state.days[state.me.id]||{});marks[k]=novo;
+      state.days[state.me.id]=marks;marcouDia=true;
+      await setDoc(doc(db,"days",state.me.id),{marks},{merge:true});
+      if(novo.filter(Boolean).length===3&&antes<3)celebrate();
+    }
+  }
+  renderExtrasBody();renderActivities();if(marcouDia)renderCalendar();
   await setDoc(doc(db,"days",state.me.id),{extras},{merge:true});
 };
 app.saveExtraLink=async(idx,el)=>{
@@ -1035,7 +1054,8 @@ function renderExtrasBody(){
     +(completo?(bruto+PONTOS_DIA)+' pontos no dia':bruto+' pontos em espera')+'</span></div>'
     +(completo?'':'<p style="color:var(--muted);font-size:13px;line-height:1.5;margin:0 0 14px;background:rgba(255,6,163,0.08);border-radius:12px;padding:10px 12px;">As ações extras só passam a valer pontos depois que as '
       +nAtividades()+' atividades do dia estiverem marcadas, o que por si só já vale '+PONTOS_DIA+' pontos. Você pode marcar agora e os pontos entram assim que o dia estiver completo.</p>');
-  html+='<div class="extraSec">Rotina do dia</div>';
+  html+='<div class="extraSec">Rotina do dia</div>'
+    +'<p style="color:var(--muted);font-size:12px;line-height:1.5;margin:0 0 10px;">Marcar gravar o vídeo ou postar o vídeo aqui já marca sozinha a atividade correspondente na tela principal.</p>';
   EXTRA_ACTIVITIES.forEach(function(a,i){
     if(i===BASICAS)html+='<div class="extraSec">Ações extras</div>';
     var on=marks[i];
