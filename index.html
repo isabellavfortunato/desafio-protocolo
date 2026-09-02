@@ -359,11 +359,27 @@ app.saveActLink=async(idx,el)=>{
      sem a participante precisar repetir na aba Vídeos */
   await registrarVideosDoTexto(v,k);
 };
+/* deixa dois endereços do mesmo vídeo comparáveis: tira o rabicho de rastreamento,
+   a barra do fim, o www e uniformiza maiúsculas no domínio */
+function chaveDoLink(u){
+  try{
+    const x=new URL(String(u).trim());
+    const fora=["utm_source","utm_medium","utm_campaign","utm_content","utm_term",
+      "igsh","igshid","fbclid","gclid","si","is_from_webapp","sender_device","sender_web_id",
+      "web_id","_r","_t","_d","share_app_id","share_link_id","share_item_id","tt_from",
+      "source","refer","referer","enter_from","checksum","user_id","timestamp","u_code"];
+    fora.forEach(f=>x.searchParams.delete(f));
+    let caminho=x.pathname.replace(/\/+$/,"");
+    let busca=x.searchParams.toString();
+    return x.hostname.toLowerCase().replace(/^www\./,"")+caminho.toLowerCase()+(busca?"?"+busca:"");
+  }catch(e){ return String(u).trim().toLowerCase().replace(/\/+$/,""); }
+}
 async function registrarVideosDoTexto(txt,k){
   const achados=String(txt||"").match(/https?:\/\/[^\s]+/g)||[];
   for(let j=0;j<achados.length;j++){
     const link=achados[j].replace(/[),.;]+$/,"");
-    if(state.videos.some(x=>x.ownerId===state.me.id&&x.link===link))continue;
+    const chave=chaveDoLink(link);
+    if(state.videos.some(x=>x.ownerId===state.me.id&&chaveDoLink(x.link)===chave))continue;
     try{ await addDoc(collection(db,"videos"),{ownerId:state.me.id,name:state.me.name,link:link,title:"",date:k,ts:Date.now()}); }
     catch(e){ console.error(e); }
   }
@@ -390,6 +406,11 @@ app.addVideo=async()=>{
   const link=(el.value||"").trim(); if(!link)return;
   const k=state.selected;
   state.videoNotice=null;state.videoError=null;
+  const chave=chaveDoLink(link);
+  if(state.videos.some(x=>x.ownerId===state.me.id&&chaveDoLink(x.link)===chave)){
+    el.value="";state.videoNotice="Esse vídeo já estava registrado, então não entrou duas vezes.";
+    renderSection();return;
+  }
   try{
     await addDoc(collection(db,"videos"),{ownerId:state.me.id,name:state.me.name,link,title:"",date:k,ts:Date.now()});
     el.value="";
