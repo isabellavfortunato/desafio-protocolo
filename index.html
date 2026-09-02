@@ -355,7 +355,19 @@ app.saveActLink=async(idx,el)=>{
   if(v)doDia[String(idx)]=v; else delete doDia[String(idx)];
   todos[k]=doDia;state.actLinks[state.me.id]=todos;
   await setDoc(doc(db,"days",state.me.id),{actLinks:todos},{merge:true});
+  /* os endereços colados nas 3 atividades do dia registram o vídeo sozinhos,
+     sem a participante precisar repetir na aba Vídeos */
+  await registrarVideosDoTexto(v,k);
 };
+async function registrarVideosDoTexto(txt,k){
+  const achados=String(txt||"").match(/https?:\/\/[^\s]+/g)||[];
+  for(let j=0;j<achados.length;j++){
+    const link=achados[j].replace(/[),.;]+$/,"");
+    if(state.videos.some(x=>x.ownerId===state.me.id&&x.link===link))continue;
+    try{ await addDoc(collection(db,"videos"),{ownerId:state.me.id,name:state.me.name,link:link,title:"",date:k,ts:Date.now()}); }
+    catch(e){ console.error(e); }
+  }
+}
 app.editActs=()=>{state.editingActs=true;renderActivities();};
 app.cancelActs=()=>{state.editingActs=false;renderActivities();};
 app.saveActs=async()=>{
@@ -788,7 +800,7 @@ function renderActivities(){
     rows+='<div class="check '+(on?"check-on":"")+'" onclick="app.toggle('+i+')">'
       +'<div class="checkbox '+(on?"checkbox-on":"")+'">'+(on?"✓":"")+'</div><span>'+esc(a)+'</span></div>';
     if(on)rows+='<div style="margin:-4px 0 12px;padding-left:4px;">'
-      +'<textarea class="field" id="ak'+i+'" rows="2" placeholder="Conte ou cole aqui o que comprova. É opcional e aceita vários links." '
+      +'<textarea class="field" id="ak'+i+'" rows="2" placeholder="Conte ou cole aqui o que comprova. Todo link de vídeo colado aqui já entra no seu contador." '
       +'onclick="event.stopPropagation()" onchange="app.saveActLink('+i+',this)" onblur="app.saveActLink('+i+',this)" '
       +'style="font-size:13px;line-height:1.5;resize:vertical;">'+esc(linkAto(state.me&&state.me.id,state.selected,i))+'</textarea>'
       +anexosHTML("act",i)+'</div>';
