@@ -238,7 +238,7 @@ const state = {
   me: null, uid: null, master:false,
   authMode:"login", authBusy:false, authError:null, authNotice:null,
   bsBusy:false, bsError:null, ventBusy:false, ventNotice:null, aberto:null, insightNotice:null,
-  videoNotice:null, videoError:null, proofTarget:null, proofBusy:false, proofError:null,
+  videoNotice:null, videoError:null, proofTarget:null, proofBusy:false, proofError:null, resgate:null,
   section:null, editingActs:false, prizesOpen:false, editingPrizes:false, extrasOpen:false,
   extras:{}, pagos:{}, extraLinks:{}, actLinks:{}, insightDate:null,
   viewY: now.getFullYear(), viewM: now.getMonth(), selected: todayKey(),
@@ -378,6 +378,7 @@ async function registrarVideosDoTexto(txt,k){
   const achados=String(txt||"").match(/https?:\/\/[^\s]+/g)||[];
   for(let j=0;j<achados.length;j++){
     const link=achados[j].replace(/[),.;]+$/,"");
+    if(!ehLinkDeVideo(link))continue;
     const chave=chaveDoLink(link);
     if(state.videos.some(x=>x.ownerId===state.me.id&&chaveDoLink(x.link)===chave))continue;
     try{ await addDoc(collection(db,"videos"),{ownerId:state.me.id,name:state.me.name,link:link,title:"",date:k,ts:Date.now()}); }
@@ -614,6 +615,47 @@ app.exportDetalhado=()=>{
 app.abrirDetalhe=(id)=>{state.aberto=(state.aberto===id?null:id);refreshSectionData();};
 app.openSection=(k)=>{state.section=(state.section===k?null:k);renderSecRow();renderSection();};
 app.recarregar=()=>{location.reload();};
+/* Varredura única: até 4 de setembro os links colados nas comprovações não viravam
+   registro de vídeo. Esta rotina roda uma vez por participante e registra o que ficou
+   para trás, sem apagar nem duplicar nada. */
+const MARCA_RESGATE = "resgateLinks1";
+async function resgatarVideosAntigos(){
+  if(!state.me)return;
+  if(localStorage.getItem(MARCA_RESGATE)===state.me.id)return;
+  const meus=state.actLinks[state.me.id]||{};
+  const chaves=Object.keys(meus).sort();
+  if(!chaves.length){ localStorage.setItem(MARCA_RESGATE,state.me.id); return; }
+  let novos=0;
+  for(let i=0;i<chaves.length;i++){
+    const k=chaves[i], doDia=meus[k]||{};
+    for(const idx in doDia){
+      const achados=String(doDia[idx]||"").match(/https?:\/\/[^\s]+/g)||[];
+      for(let j=0;j<achados.length;j++){
+        const link=achados[j].replace(/[),.;]+$/,"");
+        if(!ehLinkDeVideo(link))continue;
+        const chave=chaveDoLink(link);
+        if(state.videos.some(x=>x.ownerId===state.me.id&&chaveDoLink(x.link)===chave))continue;
+        try{
+          const ref=await addDoc(collection(db,"videos"),{ownerId:state.me.id,name:state.me.name,link:link,title:"",date:k,ts:Date.now()});
+          state.videos.push({id:ref&&ref.id||("tmp"+novos),ownerId:state.me.id,name:state.me.name,link:link,title:"",date:k,ts:Date.now()});
+          novos++;
+        }catch(e){ console.error(e); }
+      }
+    }
+  }
+  localStorage.setItem(MARCA_RESGATE,state.me.id);
+  if(novos){
+    state.resgate=novos+(novos===1?" vídeo que estava só na comprovação entrou no seu contador.":" vídeos que estavam só nas comprovações entraram no seu contador.");
+    renderCounter();renderCalendar();refreshSectionData();
+  }
+}
+/* só entram no contador os endereços que são de vídeo publicado, não documentos ou fotos */
+function ehLinkDeVideo(u){
+  const x=String(u).toLowerCase();
+  if(x.indexOf("docs.google.com")>=0||x.indexOf("drive.google.com")>=0)return false;
+  if(x.indexOf("/photo/")>=0)return false;
+  return x.indexOf("tiktok.com")>=0||x.indexOf("instagram.com")>=0||x.indexOf("youtube.com")>=0||x.indexOf("youtu.be")>=0;
+}
 /* quando o aplicativo volta do segundo plano, a conexão com o banco pode ter caído
    no celular, então redesenhamos tudo e, se nada tiver chegado, buscamos de novo */
 let voltouEm=0;
@@ -781,7 +823,8 @@ function renderCounter(){const c=byId("counter");if(!c)return;
   c.innerHTML='<div style="display:flex;align-items:center;justify-content:center;gap:10px;">'
     +'<span>'+myVideos().length+' de '+GOAL+' vídeos</span>'
     +'<button onclick="app.recarregar()" title="Atualizar" style="background:transparent;border:1px solid var(--border);border-radius:999px;color:var(--muted);width:26px;height:26px;line-height:1;cursor:pointer;padding:0;font-size:14px;">↻</button></div>'
-    +'<div style="color:var(--muted);font-size:12px;font-weight:400;margin-top:3px;">'+esc(windowLabel())+'</div>';}
+    +'<div style="color:var(--muted);font-size:12px;font-weight:400;margin-top:3px;">'+esc(windowLabel())+'</div>'
+    +(state.resgate?'<div style="color:#3ddc97;font-size:12px;font-weight:400;margin-top:6px;line-height:1.4;">'+esc(state.resgate)+'</div>':'');}
 function renderCalendar(){
   const cal=byId("cal");if(!cal)return;
   const fd=new Date(state.viewY,state.viewM,1).getDay();
@@ -1177,6 +1220,7 @@ onAuthStateChanged(auth, async (user)=>{
   state.me={id:user.uid,name:nome,email:user.email};
   if(!listening){ listen(); listening=true; }
   renderApp();
+  setTimeout(function(){ resgatarVideosAntigos().catch(e=>console.error(e)); },2500);
 });
 renderApp();
 </script>
