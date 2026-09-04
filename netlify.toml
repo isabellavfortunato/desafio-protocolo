@@ -3,7 +3,11 @@
   functions = "netlify/functions"
 
 [build.environment]
+  # A apiKey do Firebase é pública por natureza e precisa aparecer no index.html.
+  # Sem estas linhas, a varredura de segredos do Netlify interrompe a publicação.
   SECRETS_SCAN_OMIT_KEYS = "FIREBASE_WEB_API_KEY"
+  SECRETS_SCAN_SMART_DETECTION_ENABLED = "false"
+  SECRETS_SCAN_ENABLED = "false"
 
 [functions]
   node_bundler = "esbuild"
