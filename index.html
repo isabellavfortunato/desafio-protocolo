@@ -66,6 +66,9 @@ body{background:var(--bg);min-height:100vh;font-family:var(--body);color:#fff;pa
 .pagoBtn{background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:999px;padding:9px 18px;font-size:14px;font-family:var(--body);cursor:pointer;}
 .pagoBtn:hover{border-color:#ff06a3;color:#fff;}
 .pagoBtn-on{background:linear-gradient(90deg,#ff06a3,#fb0000);border-color:transparent;color:#fff;font-weight:700;}
+.avisoTela{position:fixed;inset:0;z-index:100001;background:#fb0000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:28px;padding:32px 26px;cursor:pointer;text-align:center;}
+.avisoTela .msg{color:#fff;font-size:34px;font-weight:900;line-height:1.15;max-width:520px;}
+.avisoTela .toque{color:rgba(255,255,255,0.8);font-size:14px;}
 .pagoTag{background:rgba(255,6,163,0.16);border:1px solid rgba(255,6,163,0.5);color:#fff;border-radius:999px;padding:6px 14px;font-size:13px;font-weight:700;}
 .checkbox{width:24px;height:24px;border-radius:8px;border:2px solid var(--border);display:flex;align-items:center;justify-content:center;flex:none;}
 .checkbox-on{background:#3ddc97;border-color:#3ddc97;color:#173321;}
@@ -250,7 +253,7 @@ window.app = app;
 
 /* ---------- Firestore: escuta em tempo real ---------- */
 function listen(){
-  onSnapshot(doc(db,"config","main"),(s)=>{state.config=s.exists()?s.data():{};renderCalendar();renderActivities();renderCounter();refreshSectionData();if(state.prizesOpen&&!state.editingPrizes)renderPrizesBody();});
+  onSnapshot(doc(db,"config","main"),(s)=>{state.config=s.exists()?s.data():{};renderCalendar();renderActivities();renderCounter();renderAviso();refreshSectionData();if(state.prizesOpen&&!state.editingPrizes)renderPrizesBody();});
   onSnapshot(collection(db,"participants"),(qs)=>{const m={};qs.forEach(d=>m[d.id]=d.data());state.participants=m;renderCounter();refreshSectionData();});
   onSnapshot(collection(db,"days"),(qs)=>{const m={},e={},g={},L={},A={};qs.forEach(d=>{m[d.id]=(d.data().marks)||{};e[d.id]=(d.data().extras)||{};g[d.id]=(d.data().pagos)||{};L[d.id]=(d.data().extraLinks)||{};A[d.id]=(d.data().actLinks)||{};});state.days=m;state.extras=e;state.pagos=g;state.extraLinks=L;state.actLinks=A;renderCalendar();renderActivities();if(state.extrasOpen)renderExtrasBody();refreshSectionData();});
   onSnapshot(collection(db,"videos"),(qs)=>{const a=[];qs.forEach(d=>a.push(Object.assign({id:d.id},d.data())));state.videos=a;renderCalendar();renderCounter();refreshSectionData();});
@@ -615,6 +618,55 @@ app.exportDetalhado=()=>{
 app.abrirDetalhe=(id)=>{state.aberto=(state.aberto===id?null:id);refreshSectionData();};
 app.openSection=(k)=>{state.section=(state.section===k?null:k);renderSecRow();renderSection();};
 app.recarregar=()=>{location.reload();};
+/* Avisos programados: aparecem a partir da data e hora escolhidas e somem
+   quando a participante toca neles. A organização cria e apaga no painel. */
+function avisoDaVez(){
+  const lista=(state.config.avisos||[]).slice();
+  const agora=Date.now();
+  const vistos=JSON.parse(localStorage.getItem("avisosVistos")||"[]");
+  for(let i=0;i<lista.length;i++){
+    const a=lista[i];
+    if(!a||!a.texto)continue;
+    const quando=a.quando?new Date(a.quando).getTime():0;
+    if(quando&&quando>agora)continue;
+    if(vistos.indexOf(a.id)>=0)continue;
+    return a;
+  }
+  return null;
+}
+app.fecharAviso=(id)=>{
+  const vistos=JSON.parse(localStorage.getItem("avisosVistos")||"[]");
+  if(vistos.indexOf(id)<0)vistos.push(id);
+  localStorage.setItem("avisosVistos",JSON.stringify(vistos));
+  const el=byId("avisoTela");
+  if(el){el.style.transition="opacity .25s";el.style.opacity="0";setTimeout(function(){el.remove();},250);}
+};
+function renderAviso(){
+  const antigo=byId("avisoTela");if(antigo)antigo.remove();
+  const a=avisoDaVez();if(!a)return;
+  const d=document.createElement("div");
+  d.id="avisoTela";d.className="avisoTela";
+  d.onclick=function(){app.fecharAviso(a.id);};
+  d.innerHTML='<img src="brand/simbolo.png" alt="" style="height:52px;width:auto;filter:brightness(0) invert(1);opacity:0.9;"/>'
+    +'<div class="msg">'+esc(a.texto)+'</div>'
+    +'<div class="toque">toque para continuar</div>';
+  document.body.appendChild(d);
+}
+app.salvarAviso=async()=>{
+  const t=(byId("avisoTexto").value||"").trim();
+  const q=(byId("avisoQuando").value||"").trim();
+  if(!t)return;
+  const lista=(state.config.avisos||[]).slice();
+  lista.push({id:"av"+Date.now(),texto:t,quando:q});
+  await setDoc(doc(db,"config","main"),{avisos:lista},{merge:true});
+  byId("avisoTexto").value="";
+  renderSection();
+};
+app.apagarAviso=async(id)=>{
+  const lista=(state.config.avisos||[]).filter(a=>a.id!==id);
+  await setDoc(doc(db,"config","main"),{avisos:lista},{merge:true});
+  renderSection();
+};
 /* Varredura única: até 4 de setembro os links colados nas comprovações não viravam
    registro de vídeo. Esta rotina roda uma vez por participante e registra o que ficou
    para trás, sem apagar nem duplicar nada. */
@@ -778,7 +830,7 @@ function renderApp(){
   const app=byId("app");
   if(!state.me){ app.innerHTML=entryHTML(); return; }
   app.innerHTML=mainHTML();
-  renderCounter();renderCalendar();renderActivities();renderSecRow();renderSection();
+  renderCounter();renderCalendar();renderActivities();renderSecRow();renderSection();renderAviso();
 }
 function entryHTML(){
   const signup=state.authMode==="signup";
@@ -958,6 +1010,12 @@ function renderSection(){
       +'<button class="btn-ghost" onclick="app.exportResumo()">Baixar resumo</button>'
       +'<button class="btn-ghost" onclick="app.exportDetalhado()">Baixar relatório detalhado</button></div>'
       +'<div id="orgData"></div></div>'
+      +'<div class="card"><h2 class="cardTitle">Aviso para o grupo</h2>'
+      +'<p style="color:var(--muted);font-size:13px;line-height:1.5;margin:6px 0 12px;">O aviso aparece no alto da tela de todas as participantes a partir da data e hora escolhidas, e some quando cada uma toca nele.</p>'
+      +'<input class="field" id="avisoTexto" placeholder="Vamos destravar, meu povo" style="margin-bottom:10px;"/>'
+      +'<input class="field" type="datetime-local" id="avisoQuando" style="margin-bottom:12px;"/>'
+      +'<button class="btn-ghost" onclick="app.salvarAviso()">Programar aviso</button>'
+      +'<div id="avisoLista" style="margin-top:14px;"></div></div>'
       +'<div class="card"><h2 class="cardTitle">Desabafos</h2><div id="ventData"></div></div>';
   }
   else{ el.innerHTML=""; return; }
@@ -1032,6 +1090,17 @@ function refreshSectionData(){
           +'<div><div>dias pagos</div><div style="color:#fff;font-size:16px;font-weight:700;font-family:var(--display);">'+l.pagos+'</div></div>'
           +'</div></div>'+(state.aberto===l.id?detalheHTML(l.id):"");
       }).join(""):'<p style="color:var(--muted);">Ninguém entrou no desafio ainda.</p>';
+    }
+    const al=byId("avisoLista");
+    if(al){
+      const lista=state.config.avisos||[];
+      al.innerHTML=lista.length?lista.map(function(a){
+        const q=a.quando?new Date(a.quando):null;
+        const quando=q?q.toLocaleString("pt-BR",{day:"2-digit",month:"short",hour:"2-digit",minute:"2-digit"}):"agora";
+        return '<div class="row"><div><div style="color:#fff;font-size:14px;">'+esc(a.texto)+'</div>'
+          +'<div style="color:var(--muted);font-size:12px;">a partir de '+esc(quando)+'</div></div>'
+          +'<button class="iconBtn" onclick="app.apagarAviso(\''+a.id+'\')">✕</button></div>';
+      }).join(""):'<p style="color:var(--muted);font-size:13px;">Nenhum aviso programado.</p>';
     }
     const vd=byId("ventData");
     if(vd){
