@@ -350,7 +350,12 @@ app.saveExtraLink=async(idx,el)=>{
   if(v)doDia[String(idx)]=v; else delete doDia[String(idx)];
   todos[k]=doDia;state.extraLinks[state.me.id]=todos;
   await setDoc(doc(db,"days",state.me.id),{extraLinks:todos},{merge:true});
+  /* as ações de perfil não são publicação do dia, então não registram */
+  if(!SEM_REGISTRO[idx])await registrarVideosDoTexto(v,k);
 };
+/* fixar vídeos no perfil e revisar a bio comprovam com publicações antigas,
+   que não podem entrar na contagem de vídeos do desafio */
+const SEM_REGISTRO = {47:true, 48:true};
 app.saveActLink=async(idx,el)=>{
   const k=state.selected,v=(el.value||"").trim();
   const todos=Object.assign({},state.actLinks[state.me.id]||{});
@@ -670,16 +675,21 @@ app.apagarAviso=async(id)=>{
 /* Varredura única: até 4 de setembro os links colados nas comprovações não viravam
    registro de vídeo. Esta rotina roda uma vez por participante e registra o que ficou
    para trás, sem apagar nem duplicar nada. */
-const MARCA_RESGATE = "resgateLinks1";
+const MARCA_RESGATE = "resgateLinks2";
 async function resgatarVideosAntigos(){
   if(!state.me)return;
   if(localStorage.getItem(MARCA_RESGATE)===state.me.id)return;
-  const meus=state.actLinks[state.me.id]||{};
-  const chaves=Object.keys(meus).sort();
+  const basicos=state.actLinks[state.me.id]||{};
+  const extras=state.extraLinks[state.me.id]||{};
+  const chaves=Object.keys(basicos).concat(Object.keys(extras))
+    .filter(function(v,i,a){return a.indexOf(v)===i;}).sort();
   if(!chaves.length){ localStorage.setItem(MARCA_RESGATE,state.me.id); return; }
   let novos=0;
   for(let i=0;i<chaves.length;i++){
-    const k=chaves[i], doDia=meus[k]||{};
+    const k=chaves[i];
+    const doDia={};
+    const b=basicos[k]||{}; for(const a in b)doDia["b"+a]=b[a];
+    const e=extras[k]||{}; for(const a in e){ if(!SEM_REGISTRO[a])doDia["e"+a]=e[a]; }
     for(const idx in doDia){
       const achados=String(doDia[idx]||"").match(/https?:\/\/[^\s]+/g)||[];
       for(let j=0;j<achados.length;j++){
@@ -705,7 +715,7 @@ async function resgatarVideosAntigos(){
 function ehLinkDeVideo(u){
   const x=String(u).toLowerCase();
   if(x.indexOf("docs.google.com")>=0||x.indexOf("drive.google.com")>=0)return false;
-  if(x.indexOf("/photo/")>=0)return false;
+  if(x.indexOf("/@")>=0&&x.indexOf("/video/")<0&&x.indexOf("/photo/")<0)return false;
   return x.indexOf("tiktok.com")>=0||x.indexOf("instagram.com")>=0||x.indexOf("youtube.com")>=0||x.indexOf("youtu.be")>=0;
 }
 /* quando o aplicativo volta do segundo plano, a conexão com o banco pode ter caído
@@ -916,7 +926,7 @@ function renderActivities(){
     rows+='<div class="check '+(on?"check-on":"")+'" onclick="app.toggle('+i+')">'
       +'<div class="checkbox '+(on?"checkbox-on":"")+'">'+(on?"✓":"")+'</div><span>'+esc(a)+'</span></div>';
     if(on)rows+='<div style="margin:-4px 0 12px;padding-left:4px;">'
-      +'<textarea class="field" id="ak'+i+'" rows="2" placeholder="Conte ou cole aqui o que comprova. Todo link de vídeo colado aqui já entra no seu contador." '
+      +'<textarea class="field" id="ak'+i+'" rows="2" placeholder="Conte ou cole aqui o que comprova. Todo link de publicação colado aqui já entra no seu contador." '
       +'onclick="event.stopPropagation()" onchange="app.saveActLink('+i+',this)" onblur="app.saveActLink('+i+',this)" '
       +'style="font-size:13px;line-height:1.5;resize:vertical;">'+esc(linkAto(state.me&&state.me.id,state.selected,i))+'</textarea>'
       +anexosHTML("act",i)+'</div>';
@@ -1209,7 +1219,7 @@ function renderExtrasBody(){
       +'<span style="line-height:1.4;flex:1;">'+esc(a.t)+'</span>'
       +(a.p?'<span class="ptsTag" style="flex:none;">'+a.p+'</span>':'')+'</div>';
     if(on)html+='<div style="margin:-4px 0 12px;padding-left:4px;">'
-      +'<textarea class="field" id="lk'+i+'" rows="2" placeholder="Conte ou cole aqui o que comprova. É opcional e aceita vários links." '
+      +'<textarea class="field" id="lk'+i+'" rows="2" placeholder="Conte ou cole aqui o que comprova. Todo link de publicação colado aqui já entra no seu contador." '
       +'onclick="event.stopPropagation()" onchange="app.saveExtraLink('+i+',this)" onblur="app.saveExtraLink('+i+',this)" '
       +'style="font-size:13px;line-height:1.5;resize:vertical;">'+esc(linkDe(state.me&&state.me.id,state.selected,i))+'</textarea>'
       +anexosHTML("extra",i)+'</div>';
