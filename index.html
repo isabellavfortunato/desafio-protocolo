@@ -357,6 +357,9 @@ app.saveExtraLink=async(idx,el)=>{
    quem publicou 1 vídeo conta 1, mesmo repetindo o link em várias atividades,
    e quem publicou 2 ou 3 conta 2 ou 3, pelos links distintos. */
 const EXTRAS_QUE_CONTAM = {2:true, 3:true, 4:true, 5:true};
+/* das 3 obrigatórias, interagir com a audiência não é publicação do dia:
+   o link colado ali costuma ser de um vídeo antigo em que a pessoa respondeu comentários */
+const BASICAS_QUE_CONTAM = {0:true, 1:true};
 app.saveActLink=async(idx,el)=>{
   const k=state.selected,v=(el.value||"").trim();
   const todos=Object.assign({},state.actLinks[state.me.id]||{});
@@ -364,9 +367,9 @@ app.saveActLink=async(idx,el)=>{
   if(v)doDia[String(idx)]=v; else delete doDia[String(idx)];
   todos[k]=doDia;state.actLinks[state.me.id]=todos;
   await setDoc(doc(db,"days",state.me.id),{actLinks:todos},{merge:true});
-  /* os endereços colados nas 3 atividades do dia registram o vídeo sozinhos,
+  /* o endereço colado em gravar e em editar e publicar registra o vídeo sozinho,
      sem a participante precisar repetir na aba Vídeos */
-  await registrarVideosDoTexto(v,k);
+  if(BASICAS_QUE_CONTAM[idx])await registrarVideosDoTexto(v,k);
 };
 /* deixa dois endereços do mesmo vídeo comparáveis: tira o rabicho de rastreamento,
    a barra do fim, o www e uniformiza maiúsculas no domínio */
@@ -676,7 +679,7 @@ app.apagarAviso=async(id)=>{
 /* Varredura única: até 4 de setembro os links colados nas comprovações não viravam
    registro de vídeo. Esta rotina roda uma vez por participante e registra o que ficou
    para trás, sem apagar nem duplicar nada. */
-const MARCA_RESGATE = "resgateLinks3";
+const MARCA_RESGATE = "resgateLinks4";
 /* devolve dois conjuntos de chaves: as que valem como vídeo publicado
    e as que aparecem apenas em comprovações que não contam */
 function mapaDosLinks(uid){
@@ -685,7 +688,8 @@ function mapaDosLinks(uid){
   Object.keys(basicos).forEach(function(k){
     const d=basicos[k]||{};
     for(const i in d)(String(d[i]||"").match(/https?:\/\/[^\s]+/g)||[]).forEach(function(u){
-      valem[chaveDoLink(u.replace(/[),.;]+$/,""))]=true;
+      const c=chaveDoLink(u.replace(/[),.;]+$/,""));
+      if(BASICAS_QUE_CONTAM[i])valem[c]=true; else naoValem[c]=true;
     });
   });
   Object.keys(extras).forEach(function(k){
@@ -727,7 +731,7 @@ async function resgatarVideosAntigos(){
   for(let i=0;i<chaves.length;i++){
     const k=chaves[i];
     const doDia={};
-    const b=basicos[k]||{}; for(const a in b)doDia["b"+a]=b[a];
+    const b=basicos[k]||{}; for(const a in b){ if(BASICAS_QUE_CONTAM[a])doDia["b"+a]=b[a]; }
     const e=extras[k]||{}; for(const a in e){ if(EXTRAS_QUE_CONTAM[a])doDia["e"+a]=e[a]; }
     for(const idx in doDia){
       const achados=String(doDia[idx]||"").match(/https?:\/\/[^\s]+/g)||[];
