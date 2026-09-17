@@ -350,12 +350,13 @@ app.saveExtraLink=async(idx,el)=>{
   if(v)doDia[String(idx)]=v; else delete doDia[String(idx)];
   todos[k]=doDia;state.extraLinks[state.me.id]=todos;
   await setDoc(doc(db,"days",state.me.id),{extraLinks:todos},{merge:true});
-  /* as ações de perfil não são publicação do dia, então não registram */
-  if(!SEM_REGISTRO[idx])await registrarVideosDoTexto(v,k);
+  if(EXTRAS_QUE_CONTAM[idx])await registrarVideosDoTexto(v,k);
 };
-/* fixar vídeos no perfil e revisar a bio comprovam com publicações antigas,
-   que não podem entrar na contagem de vídeos do desafio */
-const SEM_REGISTRO = {47:true, 48:true};
+/* Só contam como vídeo publicado os links colados nas 3 atividades obrigatórias
+   e nas ações de postagem: postar o vídeo, postar 1x, 2x e 3x ao dia. Assim,
+   quem publicou 1 vídeo conta 1, mesmo repetindo o link em várias atividades,
+   e quem publicou 2 ou 3 conta 2 ou 3, pelos links distintos. */
+const EXTRAS_QUE_CONTAM = {2:true, 3:true, 4:true, 5:true};
 app.saveActLink=async(idx,el)=>{
   const k=state.selected,v=(el.value||"").trim();
   const todos=Object.assign({},state.actLinks[state.me.id]||{});
@@ -389,7 +390,7 @@ async function registrarVideosDoTexto(txt,k){
     if(!ehLinkDeVideo(link))continue;
     const chave=chaveDoLink(link);
     if(state.videos.some(x=>x.ownerId===state.me.id&&chaveDoLink(x.link)===chave))continue;
-    try{ await addDoc(collection(db,"videos"),{ownerId:state.me.id,name:state.me.name,link:link,title:"",date:k,ts:Date.now()}); }
+    try{ await addDoc(collection(db,"videos"),{ownerId:state.me.id,name:state.me.name,link:link,title:"",date:k,ts:Date.now(),auto:true}); }
     catch(e){ console.error(e); }
   }
 }
@@ -675,7 +676,45 @@ app.apagarAviso=async(id)=>{
 /* Varredura única: até 4 de setembro os links colados nas comprovações não viravam
    registro de vídeo. Esta rotina roda uma vez por participante e registra o que ficou
    para trás, sem apagar nem duplicar nada. */
-const MARCA_RESGATE = "resgateLinks2";
+const MARCA_RESGATE = "resgateLinks3";
+/* devolve dois conjuntos de chaves: as que valem como vídeo publicado
+   e as que aparecem apenas em comprovações que não contam */
+function mapaDosLinks(uid){
+  const valem={}, naoValem={};
+  const basicos=state.actLinks[uid]||{}, extras=state.extraLinks[uid]||{};
+  Object.keys(basicos).forEach(function(k){
+    const d=basicos[k]||{};
+    for(const i in d)(String(d[i]||"").match(/https?:\/\/[^\s]+/g)||[]).forEach(function(u){
+      valem[chaveDoLink(u.replace(/[),.;]+$/,""))]=true;
+    });
+  });
+  Object.keys(extras).forEach(function(k){
+    const d=extras[k]||{};
+    for(const i in d)(String(d[i]||"").match(/https?:\/\/[^\s]+/g)||[]).forEach(function(u){
+      const c=chaveDoLink(u.replace(/[),.;]+$/,""));
+      if(EXTRAS_QUE_CONTAM[i])valem[c]=true; else naoValem[c]=true;
+    });
+  });
+  return {valem:valem, naoValem:naoValem};
+}
+/* Limpeza única: a varredura anterior registrou links colados em qualquer
+   comprovação. Pela regra atual, só valem os das 3 atividades obrigatórias e
+   das ações de postagem. Apaga apenas o que veio daquela varredura, ou seja,
+   o que aparece somente em comprovações que não contam. Vídeo adicionado à mão
+   pela aba Vídeos não aparece em comprovação nenhuma e por isso é preservado. */
+async function limparVideosInflados(){
+  const mapa=mapaDosLinks(state.me.id);
+  const meus=state.videos.filter(v=>v.ownerId===state.me.id);
+  let apagados=0;
+  for(let i=0;i<meus.length;i++){
+    const c=chaveDoLink(meus[i].link);
+    if(mapa.valem[c])continue;
+    if(!mapa.naoValem[c])continue;
+    try{ await deleteDoc(doc(db,"videos",meus[i].id)); apagados++; }
+    catch(e){ console.error(e); }
+  }
+  return apagados;
+}
 async function resgatarVideosAntigos(){
   if(!state.me)return;
   if(localStorage.getItem(MARCA_RESGATE)===state.me.id)return;
@@ -689,7 +728,7 @@ async function resgatarVideosAntigos(){
     const k=chaves[i];
     const doDia={};
     const b=basicos[k]||{}; for(const a in b)doDia["b"+a]=b[a];
-    const e=extras[k]||{}; for(const a in e){ if(!SEM_REGISTRO[a])doDia["e"+a]=e[a]; }
+    const e=extras[k]||{}; for(const a in e){ if(EXTRAS_QUE_CONTAM[a])doDia["e"+a]=e[a]; }
     for(const idx in doDia){
       const achados=String(doDia[idx]||"").match(/https?:\/\/[^\s]+/g)||[];
       for(let j=0;j<achados.length;j++){
@@ -698,16 +737,20 @@ async function resgatarVideosAntigos(){
         const chave=chaveDoLink(link);
         if(state.videos.some(x=>x.ownerId===state.me.id&&chaveDoLink(x.link)===chave))continue;
         try{
-          const ref=await addDoc(collection(db,"videos"),{ownerId:state.me.id,name:state.me.name,link:link,title:"",date:k,ts:Date.now()});
+          const ref=await addDoc(collection(db,"videos"),{ownerId:state.me.id,name:state.me.name,link:link,title:"",date:k,ts:Date.now(),auto:true});
           state.videos.push({id:ref&&ref.id||("tmp"+novos),ownerId:state.me.id,name:state.me.name,link:link,title:"",date:k,ts:Date.now()});
           novos++;
         }catch(e){ console.error(e); }
       }
     }
   }
+  const apagados=await limparVideosInflados();
   localStorage.setItem(MARCA_RESGATE,state.me.id);
-  if(novos){
-    state.resgate=novos+(novos===1?" vídeo que estava só na comprovação entrou no seu contador.":" vídeos que estavam só nas comprovações entraram no seu contador.");
+  if(novos||apagados){
+    const partes=[];
+    if(novos)partes.push(novos+(novos===1?" vídeo entrou":" vídeos entraram")+" no seu contador.");
+    if(apagados)partes.push(apagados+(apagados===1?" registro foi ajustado":" registros foram ajustados")+" pela regra nova de contagem.");
+    state.resgate=partes.join(" ");
     renderCounter();renderCalendar();refreshSectionData();
   }
 }
@@ -1219,7 +1262,7 @@ function renderExtrasBody(){
       +'<span style="line-height:1.4;flex:1;">'+esc(a.t)+'</span>'
       +(a.p?'<span class="ptsTag" style="flex:none;">'+a.p+'</span>':'')+'</div>';
     if(on)html+='<div style="margin:-4px 0 12px;padding-left:4px;">'
-      +'<textarea class="field" id="lk'+i+'" rows="2" placeholder="Conte ou cole aqui o que comprova. Todo link de publicação colado aqui já entra no seu contador." '
+      +'<textarea class="field" id="lk'+i+'" rows="2" placeholder="Conte ou cole aqui o que comprova. É opcional e aceita vários links." '
       +'onclick="event.stopPropagation()" onchange="app.saveExtraLink('+i+',this)" onblur="app.saveExtraLink('+i+',this)" '
       +'style="font-size:13px;line-height:1.5;resize:vertical;">'+esc(linkDe(state.me&&state.me.id,state.selected,i))+'</textarea>'
       +anexosHTML("extra",i)+'</div>';
