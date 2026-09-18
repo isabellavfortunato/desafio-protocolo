@@ -575,8 +575,7 @@ function baixarCSV(nome,linhas){
   setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},500);
 }
 function idsOrdenados(){
-  return Object.keys(state.participants).sort((a,b)=>pointsOf(b)-pointsOf(a)
-    ||state.videos.filter(v=>v.ownerId===b).length-state.videos.filter(v=>v.ownerId===a).length);
+  return Object.keys(state.participants).sort((a,b)=>pointsOf(b)-pointsOf(a)||contaVideos(b)-contaVideos(a));
 }
 function diasCompletos(id){return Object.values(state.days[id]||{}).filter(a=>a&&a.filter(Boolean).length===3).length;}
 app.exportResumo=()=>{
@@ -584,7 +583,7 @@ app.exportResumo=()=>{
   idsOrdenados().forEach(function(id,i){
     const pt=state.participants[id];
     const extras=Object.values(state.extras[id]||{}).reduce((t,a)=>t+((a||[]).filter(Boolean).length),0);
-    linhas.push([i+1,pt.name,pt.email||"",pointsOf(id),state.videos.filter(v=>v.ownerId===id).length,
+    linhas.push([i+1,pt.name,pt.email||"",pointsOf(id),contaVideos(id),
       diasCompletos(id),extras,state.backstage.filter(b=>b.ownerId===id&&b.kind!=="prova").length,
       Object.values(state.pagos[id]||{}).filter(Boolean).length]);
   });
@@ -780,7 +779,31 @@ window.addEventListener("focus",aoVoltar);
 window.addEventListener("online",aoVoltar);
 
 /* ---------- cálculos ---------- */
-const myVideos=()=>state.videos.filter(v=>v.ownerId===(state.me&&state.me.id));
+const videosDe=(uid)=>state.videos.filter(v=>v.ownerId===uid);
+const myVideos=()=>videosDe(state.me&&state.me.id);
+/* Quantos vídeos contam num dia. O teto é o que a própria participante declarou:
+   se marcou postar 3x no dia, no máximo 3; postar 2x, no máximo 2; postar 1x ou
+   postar o vídeo, no máximo 1. Endereços a mais no mesmo dia costumam ser o mesmo
+   vídeo compartilhado de novo, que o TikTok entrega com outro endereço curto.
+   Sem nenhuma ação de postagem marcada, vale o que os registros mostram. */
+function tetoDoDia(uid,k){
+  const m=((state.extras[uid]||{})[k])||[];
+  if(m[5])return 3;
+  if(m[4])return 2;
+  if(m[3]||m[2])return 1;
+  return null;
+}
+function contaVideos(uid){
+  const porDia={};
+  videosDe(uid).forEach(function(v){
+    const k=v.date||keyFromTs(v.ts);
+    porDia[k]=(porDia[k]||0)+1;
+  });
+  return Object.keys(porDia).reduce(function(t,k){
+    const teto=tetoDoDia(uid,k);
+    return t+(teto?Math.min(porDia[k],teto):porDia[k]);
+  },0);
+}
 const dayVideos=(k)=>myVideos().filter(v=>(v.date||keyFromTs(v.ts))===k);
 const myDays=()=>state.days[state.me&&state.me.id]||{};
 const dayCount=(k)=>((myDays()[k])||[]).filter(Boolean).length;
@@ -843,7 +866,7 @@ const CIRCLE={
 function ranking(){
   return Object.keys(state.participants).map(id=>{
     const g=Object.values(state.days[id]||{}).filter(a=>a&&a.filter(Boolean).length===3).length;
-    const count=state.videos.filter(v=>v.ownerId===id).length;
+    const count=contaVideos(id);
     return {id,name:state.participants[id].name,count,greenDays:g,pontos:pointsOf(id)};
   }).sort((a,b)=>b.pontos-a.pontos||b.count-a.count||b.greenDays-a.greenDays||a.name.localeCompare(b.name));
 }
@@ -930,7 +953,7 @@ function mainHTML(){
 }
 function renderCounter(){const c=byId("counter");if(!c)return;
   c.innerHTML='<div style="display:flex;align-items:center;justify-content:center;gap:10px;">'
-    +'<span>'+myVideos().length+' de '+GOAL+' vídeos</span>'
+    +'<span>'+contaVideos(state.me&&state.me.id)+' de '+GOAL+' vídeos</span>'
     +'<button onclick="app.recarregar()" title="Atualizar" style="background:transparent;border:1px solid var(--border);border-radius:999px;color:var(--muted);width:26px;height:26px;line-height:1;cursor:pointer;padding:0;font-size:14px;">↻</button></div>'
     +'<div style="color:var(--muted);font-size:12px;font-weight:400;margin-top:3px;">'+esc(windowLabel())+'</div>'
     +(state.resgate?'<div style="color:#3ddc97;font-size:12px;font-weight:400;margin-top:6px;line-height:1.4;">'+esc(state.resgate)+'</div>':'');}
@@ -1130,7 +1153,7 @@ function refreshSectionData(){
         const dias=Object.values(state.days[id]||{}).filter(a=>a&&a.filter(Boolean).length===3).length;
         const extras=Object.values(state.extras[id]||{}).reduce((t,a)=>t+((a||[]).filter(Boolean).length),0);
         return {id:id,nome:state.participants[id].name,email:state.participants[id].email||"",
-          videos:state.videos.filter(v=>v.ownerId===id).length,dias:dias,extras:extras,pontos:pointsOf(id),
+          videos:contaVideos(id),dias:dias,extras:extras,pontos:pointsOf(id),
           bastidores:state.backstage.filter(b=>b.ownerId===id&&b.kind!=="prova").length,
           pagos:Object.values(state.pagos[id]||{}).filter(Boolean).length};
       }).sort((a,b)=>b.pontos-a.pontos||b.videos-a.videos||a.nome.localeCompare(b.nome));
