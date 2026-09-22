@@ -577,7 +577,7 @@ function baixarCSV(nome,linhas){
 function idsOrdenados(){
   return Object.keys(state.participants).sort((a,b)=>pointsOf(b)-pointsOf(a)||contaVideos(b)-contaVideos(a));
 }
-function diasCompletos(id){return Object.values(state.days[id]||{}).filter(a=>a&&a.filter(Boolean).length===3).length;}
+function diasCompletos(id){return diasValidos(id);}
 app.exportResumo=()=>{
   const linhas=[["Posição","Nome","E-mail","Pontos","Vídeos publicados","Dias completos","Extras marcadas","Bastidores","Dias marcados como pago"]];
   idsOrdenados().forEach(function(id,i){
@@ -606,9 +606,10 @@ app.exportDetalhado=()=>{
         if(!on||!EXTRA_ACTIVITIES[i])return;
         const ok=diaCompleto(id,k),pp=EXTRA_ACTIVITIES[i].p;
         const nf=provasDe(id,k,"extra",i).length;
+        const motivo=tresMarcadas(id,k)?"Não contou, dia sem comprovação":"Não contou, dia incompleto";
         linhas.push([nome,mail,k,pp?"Ação com pontos":"Extra da rotina",EXTRA_ACTIVITIES[i].t,pp?(ok?pp:0):"",
           linkDe(id,k,i)+(nf?(linkDe(id,k,i)?"\n":"")+nf+" imagem(ns) anexada(s)":""),
-          pp?(ok?"Contou":"Não contou, dia incompleto"):""]);
+          pp?(ok?"Contou":motivo):""]);
       });
     });
     state.videos.filter(v=>v.ownerId===id).sort((a,b)=>(a.date||"").localeCompare(b.date||"")).forEach(function(v){
@@ -811,7 +812,16 @@ const myExtras=()=>state.extras[state.me&&state.me.id]||{};
 const extraCount=(k)=>((myExtras()[k])||[]).filter(Boolean).length;
 const pointsOfDay=(marks)=>(marks||[]).reduce((t,on,i)=>t+(on&&EXTRA_ACTIVITIES[i]?EXTRA_ACTIVITIES[i].p:0),0);
 const nAtividades=()=>(state.config.activities||DEFAULT_ACTIVITIES).length;
-const diaCompleto=(uid,k)=>(((state.days[uid]||{})[k])||[]).filter(Boolean).length>=nAtividades();
+const tresMarcadas=(uid,k)=>(((state.days[uid]||{})[k])||[]).filter(Boolean).length>=nAtividades();
+/* Um dia só pontua quando, além das 3 atividades marcadas, existe comprovação
+   daquele dia: um vídeo registrado com essa data ou uma imagem anexada. */
+function temComprovacao(uid,k){
+  if(state.videos.some(v=>v.ownerId===uid&&(v.date||keyFromTs(v.ts))===k))return true;
+  if(state.backstage.some(b=>b.kind==="prova"&&b.ownerId===uid&&(b.date||keyFromTs(b.ts))===k))return true;
+  return false;
+}
+const diaCompleto=(uid,k)=>tresMarcadas(uid,k)&&temComprovacao(uid,k);
+const diasValidos=(uid)=>Object.keys(state.days[uid]||{}).filter(k=>diaCompleto(uid,k)).length;
 const pointsOf=(uid)=>{
   const chaves={};
   Object.keys(state.days[uid]||{}).forEach(k=>chaves[k]=1);
@@ -865,7 +875,7 @@ const CIRCLE={
 };
 function ranking(){
   return Object.keys(state.participants).map(id=>{
-    const g=Object.values(state.days[id]||{}).filter(a=>a&&a.filter(Boolean).length===3).length;
+    const g=diasValidos(id);
     const count=contaVideos(id);
     return {id,name:state.participants[id].name,count,greenDays:g,pontos:pointsOf(id)};
   }).sort((a,b)=>b.pontos-a.pontos||b.count-a.count||b.greenDays-a.greenDays||a.name.localeCompare(b.name));
@@ -1003,8 +1013,10 @@ function renderActivities(){
   });
   const ec=extraCount(state.selected);
   const completo=diaCompleto(state.me&&state.me.id,state.selected);
+  const semProva=tresMarcadas(state.me&&state.me.id,state.selected)&&!completo;
   const ep=completo?pointsOfDay(myExtras()[state.selected])+PONTOS_DIA:0;
   el.innerHTML=rows
+    +(semProva?'<p style="color:#f6a821;font-size:13px;line-height:1.5;margin:-2px 0 12px;background:rgba(246,168,33,0.10);border-radius:12px;padding:10px 12px;">Falta a comprovação deste dia. Cole o link do vídeo em uma das atividades acima ou anexe um print para o dia pontuar.</p>':'')
     +'<button class="extraBtn" onclick="app.openExtras()"><span style="display:inline-flex;align-items:center;gap:9px;"><svg viewBox="0 0 24 24" width="17" height="17" fill="#ff06a3" style="flex:none;"><path d="M12 2.6l2.9 5.9 6.5.9-4.7 4.6 1.1 6.5L12 17.4 6.2 20.5l1.1-6.5L2.6 9.4l6.5-.9L12 2.6z"/></svg>Atividades extras</span>'
     +(ec?'<span style="display:inline-flex;align-items:center;gap:8px;"><span class="extraCount">'+ec+'</span>'
       +(ep?'<span class="ptsTag">'+ep+' pontos</span>':'')
@@ -1021,7 +1033,7 @@ function renderSecRow(){
 function renderSection(){
   const el=byId("sectionArea");if(!el)return;
   if(state.section==="ranking"){el.innerHTML='<div class="card"><h2 class="cardTitle">Ranking geral</h2>'
-    +'<p style="color:var(--muted);font-size:13px;line-height:1.5;margin:6px 0 14px;">A ordem é pela pontuação. Cada dia com as 3 atividades marcadas vale '+PONTOS_DIA+' pontos, e é também o que libera os pontos das ações extras daquele dia. Em caso de empate, quem publicou mais vídeos fica na frente.</p>'
+    +'<p style="color:var(--muted);font-size:13px;line-height:1.5;margin:6px 0 14px;">A ordem é pela pontuação. Cada dia com as 3 atividades marcadas e com comprovação, seja o link do vídeo ou um print, vale '+PONTOS_DIA+' pontos, e é também o que libera os pontos das ações extras daquele dia. Em caso de empate, quem publicou mais vídeos fica na frente.</p>'
     +'<div id="rankData"></div></div>';}
   else if(state.section==="videos"){
     el.innerHTML='<div class="card"><input class="field" id="vLink" placeholder="Link do Instagram, TikTok ou YouTube" style="margin-bottom:12px;"/>'
@@ -1110,7 +1122,7 @@ function refreshSectionData(){
       return '<div class="rankRow" style="'+(me?"background:rgba(255,107,157,0.10);":"")+'">'
         +'<div class="rankPos" style="color:'+medal+';">'+(i<3?"♛":(i+1))+'</div>'
         +'<div style="flex:1;"><div style="color:#fff;margin-bottom:4px;">'+esc(p.name)+(me?' <span class="tag">você</span>':"")+'</div>'
-        +'<div style="color:var(--muted);font-size:12px;margin-bottom:6px;">'+p.count+' '+(p.count===1?"vídeo":"vídeos")+' · '+p.greenDays+' dias concluídos</div>'
+        +'<div style="color:var(--muted);font-size:12px;margin-bottom:6px;">'+p.count+' '+(p.count===1?"vídeo":"vídeos")+' · '+p.greenDays+(p.greenDays===1?' dia concluído':' dias concluídos')+'</div>'
         +'<div class="bar"><span style="width:'+pct+'%"></span></div></div>'
         +'<div style="width:64px;text-align:right;"><div style="font-family:var(--display);font-weight:700;font-size:21px;color:#ff06a3;line-height:1.1;">'+p.pontos+'</div>'
         +'<div style="color:var(--muted);font-size:11px;">'+(p.pontos===1?"ponto":"pontos")+'</div></div></div>';
@@ -1150,7 +1162,7 @@ function refreshSectionData(){
     const od=byId("orgData");
     if(od){
       const linhas=Object.keys(state.participants).map(function(id){
-        const dias=Object.values(state.days[id]||{}).filter(a=>a&&a.filter(Boolean).length===3).length;
+        const dias=diasValidos(id);
         const extras=Object.values(state.extras[id]||{}).reduce((t,a)=>t+((a||[]).filter(Boolean).length),0);
         return {id:id,nome:state.participants[id].name,email:state.participants[id].email||"",
           videos:contaVideos(id),dias:dias,extras:extras,pontos:pointsOf(id),
@@ -1277,8 +1289,11 @@ function renderExtrasBody(){
     +'<span style="color:var(--muted);font-size:13px;">'+esc(fmtShort(state.selected))+'</span>'
     +'<span class="ptsTag"'+(completo?'':' style="background:rgba(255,255,255,0.08);color:var(--muted);"')+'>'
     +(completo?(bruto+PONTOS_DIA)+' pontos no dia':bruto+' pontos em espera')+'</span></div>'
-    +(completo?'':'<p style="color:var(--muted);font-size:13px;line-height:1.5;margin:0 0 14px;background:rgba(255,6,163,0.08);border-radius:12px;padding:10px 12px;">As ações extras só passam a valer pontos depois que as '
-      +nAtividades()+' atividades do dia estiverem marcadas, o que por si só já vale '+PONTOS_DIA+' pontos. Você pode marcar agora e os pontos entram assim que o dia estiver completo.</p>');
+    +(completo?'':'<p style="color:var(--muted);font-size:13px;line-height:1.5;margin:0 0 14px;background:rgba(255,6,163,0.08);border-radius:12px;padding:10px 12px;">'
+      +(tresMarcadas(state.me&&state.me.id,state.selected)
+        ?'As '+nAtividades()+' atividades estão marcadas, mas o dia ainda não tem comprovação. Cole o link do vídeo em gravar ou em editar e publicar, ou anexe um print, e os pontos entram na hora.'
+        :'As ações extras só passam a valer pontos depois que as '+nAtividades()+' atividades do dia estiverem marcadas e o dia tiver comprovação, com o link do vídeo ou um print. Isso por si só já vale '+PONTOS_DIA+' pontos.')
+      +'</p>');
   html+='<div class="extraSec">Rotina do dia</div>'
     +'<p style="color:var(--muted);font-size:12px;line-height:1.5;margin:0 0 10px;">Marcar gravar o vídeo ou postar o vídeo aqui já marca sozinha a atividade correspondente na tela principal.</p>';
   EXTRA_ACTIVITIES.forEach(function(a,i){
