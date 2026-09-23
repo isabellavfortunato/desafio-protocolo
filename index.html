@@ -241,7 +241,7 @@ const state = {
   me: null, uid: null, master:false,
   authMode:"login", authBusy:false, authError:null, authNotice:null,
   bsBusy:false, bsError:null, ventBusy:false, ventNotice:null, aberto:null, insightNotice:null,
-  videoNotice:null, videoError:null, proofTarget:null, proofBusy:false, proofError:null, resgate:null,
+  videoNotice:null, videoError:null, carregou:{}, exportAviso:null, proofTarget:null, proofBusy:false, proofError:null, resgate:null,
   section:null, editingActs:false, prizesOpen:false, editingPrizes:false, extrasOpen:false,
   extras:{}, pagos:{}, extraLinks:{}, actLinks:{}, insightDate:null,
   viewY: now.getFullYear(), viewM: now.getMonth(), selected: todayKey(),
@@ -254,11 +254,11 @@ window.app = app;
 /* ---------- Firestore: escuta em tempo real ---------- */
 function listen(){
   onSnapshot(doc(db,"config","main"),(s)=>{state.config=s.exists()?s.data():{};renderCalendar();renderActivities();renderCounter();renderAviso();refreshSectionData();if(state.prizesOpen&&!state.editingPrizes)renderPrizesBody();});
-  onSnapshot(collection(db,"participants"),(qs)=>{const m={};qs.forEach(d=>m[d.id]=d.data());state.participants=m;renderCounter();refreshSectionData();});
-  onSnapshot(collection(db,"days"),(qs)=>{const m={},e={},g={},L={},A={};qs.forEach(d=>{m[d.id]=(d.data().marks)||{};e[d.id]=(d.data().extras)||{};g[d.id]=(d.data().pagos)||{};L[d.id]=(d.data().extraLinks)||{};A[d.id]=(d.data().actLinks)||{};});state.days=m;state.extras=e;state.pagos=g;state.extraLinks=L;state.actLinks=A;renderCalendar();renderActivities();if(state.extrasOpen)renderExtrasBody();refreshSectionData();});
-  onSnapshot(collection(db,"videos"),(qs)=>{const a=[];qs.forEach(d=>a.push(Object.assign({id:d.id},d.data())));state.videos=a;renderCalendar();renderCounter();refreshSectionData();});
+  onSnapshot(collection(db,"participants"),(qs)=>{const m={};qs.forEach(d=>m[d.id]=d.data());state.participants=m;state.carregou.participants=true;renderCounter();refreshSectionData();});
+  onSnapshot(collection(db,"days"),(qs)=>{const m={},e={},g={},L={},A={};qs.forEach(d=>{m[d.id]=(d.data().marks)||{};e[d.id]=(d.data().extras)||{};g[d.id]=(d.data().pagos)||{};L[d.id]=(d.data().extraLinks)||{};A[d.id]=(d.data().actLinks)||{};});state.days=m;state.extras=e;state.pagos=g;state.extraLinks=L;state.actLinks=A;state.carregou.days=true;renderCalendar();renderActivities();if(state.extrasOpen)renderExtrasBody();refreshSectionData();});
+  onSnapshot(collection(db,"videos"),(qs)=>{const a=[];qs.forEach(d=>a.push(Object.assign({id:d.id},d.data())));state.videos=a;state.carregou.videos=true;renderCalendar();renderCounter();refreshSectionData();});
   onSnapshot(collection(db,"insights"),(qs)=>{const a=[];qs.forEach(d=>a.push(Object.assign({id:d.id},d.data())));state.insights=a;refreshSectionData();});
-  onSnapshot(collection(db,"backstage"),(qs)=>{const a=[];qs.forEach(d=>a.push(Object.assign({id:d.id},d.data())));state.backstage=a;renderActivities();if(state.extrasOpen)renderExtrasBody();refreshSectionData();});
+  onSnapshot(collection(db,"backstage"),(qs)=>{const a=[];qs.forEach(d=>a.push(Object.assign({id:d.id},d.data())));state.backstage=a;state.carregou.backstage=true;renderActivities();if(state.extrasOpen)renderExtrasBody();refreshSectionData();});
   const ventsRef = state.master ? collection(db,"vents") : query(collection(db,"vents"),where("ownerId","==",state.uid));
   onSnapshot(ventsRef,(qs)=>{const a=[];qs.forEach(d=>a.push(Object.assign({id:d.id},d.data())));state.vents=a;refreshSectionData();},(e)=>console.error(e));
 }
@@ -578,7 +578,13 @@ function idsOrdenados(){
   return Object.keys(state.participants).sort((a,b)=>pointsOf(b)-pointsOf(a)||contaVideos(b)-contaVideos(a));
 }
 function diasCompletos(id){return diasValidos(id);}
+function podeExportar(){
+  if(dadosProntos()&&Object.keys(state.participants).length)return true;
+  state.exportAviso="Os dados ainda estão carregando. Espere a lista de participantes aparecer e tente de novo.";
+  renderSection();return false;
+}
 app.exportResumo=()=>{
+  if(!podeExportar())return;
   const linhas=[["Posição","Nome","E-mail","Pontos","Vídeos publicados","Dias completos","Extras marcadas","Bastidores","Dias marcados como pago"]];
   idsOrdenados().forEach(function(id,i){
     const pt=state.participants[id];
@@ -590,6 +596,7 @@ app.exportResumo=()=>{
   baixarCSV("Desafio 50 vídeos - resumo.csv",linhas);
 };
 app.exportDetalhado=()=>{
+  if(!podeExportar())return;
   const linhas=[["Nome","E-mail","Data","Tipo","Item","Pontos","Comprovação","Situação"]];
   idsOrdenados().forEach(function(id){
     const pt=state.participants[id],nome=pt.name,mail=pt.email||"";
@@ -627,6 +634,9 @@ app.exportDetalhado=()=>{
 app.abrirDetalhe=(id)=>{state.aberto=(state.aberto===id?null:id);refreshSectionData();};
 app.openSection=(k)=>{state.section=(state.section===k?null:k);renderSecRow();renderSection();};
 app.recarregar=()=>{location.reload();};
+/* tudo o que o painel e os relatórios precisam já chegou do banco? */
+const dadosProntos=()=>!!(state.carregou.participants&&state.carregou.days&&state.carregou.videos&&state.carregou.backstage);
+const avisoCarregando='<p style="color:var(--muted);line-height:1.5;">Carregando os dados do desafio. Se demorar mais do que alguns segundos, toque no botão de atualizar, ao lado do contador.</p>';
 /* Avisos programados: aparecem a partir da data e hora escolhidas e somem
    quando a participante toca neles. A organização cria e apaga no painel. */
 function avisoDaVez(){
@@ -1101,6 +1111,7 @@ function renderSection(){
       +'<div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:16px;">'
       +'<button class="btn-ghost" onclick="app.exportResumo()">Baixar resumo</button>'
       +'<button class="btn-ghost" onclick="app.exportDetalhado()">Baixar relatório detalhado</button></div>'
+      +(state.exportAviso?'<p style="color:#f6a821;font-size:13px;line-height:1.5;margin:0 0 14px;">'+esc(state.exportAviso)+'</p>':'')
       +'<div id="orgData"></div></div>'
       +'<div class="card"><h2 class="cardTitle">Aviso para o grupo</h2>'
       +'<p style="color:var(--muted);font-size:13px;line-height:1.5;margin:6px 0 12px;">O aviso aparece no alto da tela de todas as participantes a partir da data e hora escolhidas, e some quando cada uma toca nele.</p>'
@@ -1116,7 +1127,7 @@ function renderSection(){
 }
 function refreshSectionData(){
   if(state.section==="ranking"){const el=byId("rankData");if(!el)return;
-    const r=ranking();if(!r.length){el.innerHTML='<p style="color:var(--muted);">Ainda não há registros.</p>';return;}
+    const r=ranking();if(!r.length){el.innerHTML=dadosProntos()?'<p style="color:var(--muted);">Ainda não há registros.</p>':avisoCarregando;return;}
     el.innerHTML=r.map((p,i)=>{const medal=["#ff06a3","#e9eaf0","#9d0000"][i]||"var(--muted)";const me=p.id===state.me.id;
       const pct=Math.min(p.count/GOAL*100,100);
       return '<div class="rankRow" style="'+(me?"background:rgba(255,107,157,0.10);":"")+'">'
@@ -1145,7 +1156,7 @@ function refreshSectionData(){
   else if(state.section==="racks"){
     const el=byId("bsData");if(!el)return;
     const list=state.backstage.filter(b=>b.kind!=="prova").sort((a,b)=>b.ts-a.ts);
-    if(!list.length){el.innerHTML='<p style="color:var(--muted);">Nenhum bastidor enviado ainda.</p>';return;}
+    if(!list.length){el.innerHTML=dadosProntos()?'<p style="color:var(--muted);">Nenhum bastidor enviado ainda.</p>':avisoCarregando;return;}
     el.innerHTML=list.map(function(b){
       const meu=b.ownerId===state.me.id;
       const dia=b.date||keyFromTs(b.ts);
@@ -1181,7 +1192,7 @@ function refreshSectionData(){
           +'<div><div>bastidores</div><div style="color:#fff;font-size:16px;font-weight:700;font-family:var(--display);">'+l.bastidores+'</div></div>'
           +'<div><div>dias pagos</div><div style="color:#fff;font-size:16px;font-weight:700;font-family:var(--display);">'+l.pagos+'</div></div>'
           +'</div></div>'+(state.aberto===l.id?detalheHTML(l.id):"");
-      }).join(""):'<p style="color:var(--muted);">Ninguém entrou no desafio ainda.</p>';
+      }).join(""):(dadosProntos()?'<p style="color:var(--muted);">Ninguém entrou no desafio ainda.</p>':avisoCarregando);
     }
     const al=byId("avisoLista");
     if(al){
@@ -1201,7 +1212,7 @@ function refreshSectionData(){
         return '<div class="vidCard"><div style="color:#fff;font-size:15px;">'+esc(v.name)+'</div>'
           +'<div style="color:var(--muted);font-size:12px;margin-bottom:8px;">'+fmtShort(keyFromTs(v.ts))+'</div>'
           +'<p style="color:#fff;line-height:1.6;margin:0;white-space:pre-wrap;">'+esc(v.text)+'</p></div>';
-      }).join(""):'<p style="color:var(--muted);">Nenhum desabafo até agora.</p>';
+      }).join(""):(dadosProntos()?'<p style="color:var(--muted);">Nenhum desabafo até agora.</p>':avisoCarregando);
     }
   }
   else if(state.section==="insights"){
