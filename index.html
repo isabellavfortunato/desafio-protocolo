@@ -550,6 +550,7 @@ function anexosHTML(alvo,i){
   return '<div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:8px;">'+fotos
     +'<button class="btn-ghost" style="padding:7px 12px;font-size:12px;" '+(state.proofBusy?"disabled":"")
     +' onclick="event.stopPropagation();app.pickProof(\''+alvo+'\','+i+')">'+(state.proofBusy?"Enviando a imagem":"Anexar imagem")+'</button></div>'
+    +'<p style="color:var(--muted);font-size:12px;line-height:1.45;margin:6px 0 0;">Se for comprovar por print, a data da publicação precisa aparecer na imagem.</p>'
     +(state.proofError?'<p style="color:#fb0000;font-size:12px;line-height:1.4;margin:6px 0 0;">'+esc(state.proofError)+'</p>':'');
 }
 app.sendVent=async()=>{
@@ -585,11 +586,11 @@ function podeExportar(){
 }
 app.exportResumo=()=>{
   if(!podeExportar())return;
-  const linhas=[["Posição","Nome","E-mail","Pontos","Vídeos publicados","Dias completos","Extras marcadas","Bastidores","Dias marcados como pago"]];
+  const linhas=[["Posição","Nome","E-mail","Pontos","Vídeos publicados","Endereços repetidos","Dias completos","Extras marcadas","Bastidores","Dias marcados como pago"]];
   idsOrdenados().forEach(function(id,i){
     const pt=state.participants[id];
     const extras=Object.values(state.extras[id]||{}).reduce((t,a)=>t+((a||[]).filter(Boolean).length),0);
-    linhas.push([i+1,pt.name,pt.email||"",pointsOf(id),contaVideos(id),
+    linhas.push([i+1,pt.name,pt.email||"",pointsOf(id),contaVideos(id),repetidosDe(id),
       diasCompletos(id),extras,state.backstage.filter(b=>b.ownerId===id&&b.kind!=="prova").length,
       Object.values(state.pagos[id]||{}).filter(Boolean).length]);
   });
@@ -797,23 +798,19 @@ const myVideos=()=>videosDe(state.me&&state.me.id);
    postar o vídeo, no máximo 1. Endereços a mais no mesmo dia costumam ser o mesmo
    vídeo compartilhado de novo, que o TikTok entrega com outro endereço curto.
    Sem nenhuma ação de postagem marcada, vale o que os registros mostram. */
-function tetoDoDia(uid,k){
-  const m=((state.extras[uid]||{})[k])||[];
-  if(m[5])return 3;
-  if(m[4])return 2;
-  if(m[3]||m[2])return 1;
-  return null;
-}
+/* Conta os vídeos pelos endereços distintos, sem limite por dia. O que vale é
+   quantas publicações diferentes a pessoa registrou. Endereços repetidos, mesmo
+   escritos de formas diferentes, contam uma vez só. */
 function contaVideos(uid){
-  const porDia={};
-  videosDe(uid).forEach(function(v){
-    const k=v.date||keyFromTs(v.ts);
-    porDia[k]=(porDia[k]||0)+1;
-  });
-  return Object.keys(porDia).reduce(function(t,k){
-    const teto=tetoDoDia(uid,k);
-    return t+(teto?Math.min(porDia[k],teto):porDia[k]);
-  },0);
+  const vistos={};
+  videosDe(uid).forEach(function(v){ vistos[chaveDoLink(v.link)]=true; });
+  return Object.keys(vistos).length;
+}
+/* quantos registros dessa pessoa apontam para um endereço que já aparece em outro */
+function repetidosDe(uid){
+  const conta={};
+  videosDe(uid).forEach(function(v){ const c=chaveDoLink(v.link); conta[c]=(conta[c]||0)+1; });
+  return Object.keys(conta).reduce(function(t,c){ return t+(conta[c]-1); },0);
 }
 const dayVideos=(k)=>myVideos().filter(v=>(v.date||keyFromTs(v.ts))===k);
 const myDays=()=>state.days[state.me&&state.me.id]||{};
@@ -1026,7 +1023,7 @@ function renderActivities(){
   const semProva=tresMarcadas(state.me&&state.me.id,state.selected)&&!completo;
   const ep=completo?pointsOfDay(myExtras()[state.selected])+PONTOS_DIA:0;
   el.innerHTML=rows
-    +(semProva?'<p style="color:#f6a821;font-size:13px;line-height:1.5;margin:-2px 0 12px;background:rgba(246,168,33,0.10);border-radius:12px;padding:10px 12px;">Falta a comprovação deste dia. Cole o link do vídeo em uma das atividades acima ou anexe um print para o dia pontuar.</p>':'')
+    +(semProva?'<p style="color:#f6a821;font-size:13px;line-height:1.5;margin:-2px 0 12px;background:rgba(246,168,33,0.10);border-radius:12px;padding:10px 12px;">Falta a comprovação deste dia. Cole o link do vídeo em uma das atividades acima ou anexe um print em que apareça a data da publicação.</p>':'')
     +'<button class="extraBtn" onclick="app.openExtras()"><span style="display:inline-flex;align-items:center;gap:9px;"><svg viewBox="0 0 24 24" width="17" height="17" fill="#ff06a3" style="flex:none;"><path d="M12 2.6l2.9 5.9 6.5.9-4.7 4.6 1.1 6.5L12 17.4 6.2 20.5l1.1-6.5L2.6 9.4l6.5-.9L12 2.6z"/></svg>Atividades extras</span>'
     +(ec?'<span style="display:inline-flex;align-items:center;gap:8px;"><span class="extraCount">'+ec+'</span>'
       +(ep?'<span class="ptsTag">'+ep+' pontos</span>':'')
@@ -1043,7 +1040,7 @@ function renderSecRow(){
 function renderSection(){
   const el=byId("sectionArea");if(!el)return;
   if(state.section==="ranking"){el.innerHTML='<div class="card"><h2 class="cardTitle">Ranking geral</h2>'
-    +'<p style="color:var(--muted);font-size:13px;line-height:1.5;margin:6px 0 14px;">A ordem é pela pontuação. Cada dia com as 3 atividades marcadas e com comprovação, seja o link do vídeo ou um print, vale '+PONTOS_DIA+' pontos, e é também o que libera os pontos das ações extras daquele dia. Em caso de empate, quem publicou mais vídeos fica na frente.</p>'
+    +'<p style="color:var(--muted);font-size:13px;line-height:1.5;margin:6px 0 14px;">A ordem é pela pontuação. Cada dia com as 3 atividades marcadas e com comprovação, seja o link do vídeo ou um print com a data da publicação visível, vale '+PONTOS_DIA+' pontos, e é também o que libera os pontos das ações extras daquele dia. Em caso de empate, quem publicou mais vídeos fica na frente.</p>'
     +'<div id="rankData"></div></div>';}
   else if(state.section==="videos"){
     el.innerHTML='<div class="card"><input class="field" id="vLink" placeholder="Link do Instagram, TikTok ou YouTube" style="margin-bottom:12px;"/>'
@@ -1176,7 +1173,7 @@ function refreshSectionData(){
         const dias=diasValidos(id);
         const extras=Object.values(state.extras[id]||{}).reduce((t,a)=>t+((a||[]).filter(Boolean).length),0);
         return {id:id,nome:state.participants[id].name,email:state.participants[id].email||"",
-          videos:contaVideos(id),dias:dias,extras:extras,pontos:pointsOf(id),
+          videos:contaVideos(id),repetidos:repetidosDe(id),dias:dias,extras:extras,pontos:pointsOf(id),
           bastidores:state.backstage.filter(b=>b.ownerId===id&&b.kind!=="prova").length,
           pagos:Object.values(state.pagos[id]||{}).filter(Boolean).length};
       }).sort((a,b)=>b.pontos-a.pontos||b.videos-a.videos||a.nome.localeCompare(b.nome));
@@ -1186,6 +1183,7 @@ function refreshSectionData(){
           +'<div style="color:var(--muted);font-size:12px;">'+esc(l.email)+'</div></div>'
           +'<div style="display:flex;gap:16px;flex-wrap:wrap;color:var(--muted);font-size:12px;text-align:right;">'
           +'<div><div>vídeos</div><div style="color:#fff;font-size:16px;font-weight:700;font-family:var(--display);">'+l.videos+'</div></div>'
+          +(l.repetidos?'<div><div>repetidos</div><div style="color:#f6a821;font-size:16px;font-weight:700;font-family:var(--display);">'+l.repetidos+'</div></div>':'')
           +'<div><div>dias completos</div><div style="color:#fff;font-size:16px;font-weight:700;font-family:var(--display);">'+l.dias+'</div></div>'
           +'<div><div>extras</div><div style="color:#fff;font-size:16px;font-weight:700;font-family:var(--display);">'+l.extras+'</div></div>'
           +'<div><div>pontos</div><div style="color:#ff06a3;font-size:16px;font-weight:700;font-family:var(--display);">'+l.pontos+'</div></div>'
@@ -1302,7 +1300,7 @@ function renderExtrasBody(){
     +(completo?(bruto+PONTOS_DIA)+' pontos no dia':bruto+' pontos em espera')+'</span></div>'
     +(completo?'':'<p style="color:var(--muted);font-size:13px;line-height:1.5;margin:0 0 14px;background:rgba(255,6,163,0.08);border-radius:12px;padding:10px 12px;">'
       +(tresMarcadas(state.me&&state.me.id,state.selected)
-        ?'As '+nAtividades()+' atividades estão marcadas, mas o dia ainda não tem comprovação. Cole o link do vídeo em gravar ou em editar e publicar, ou anexe um print, e os pontos entram na hora.'
+        ?'As '+nAtividades()+' atividades estão marcadas, mas o dia ainda não tem comprovação. Cole o link do vídeo em gravar ou em editar e publicar, ou anexe um print com a data da publicação visível, e os pontos entram na hora.'
         :'As ações extras só passam a valer pontos depois que as '+nAtividades()+' atividades do dia estiverem marcadas e o dia tiver comprovação, com o link do vídeo ou um print. Isso por si só já vale '+PONTOS_DIA+' pontos.')
       +'</p>');
   html+='<div class="extraSec">Rotina do dia</div>'
