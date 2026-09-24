@@ -198,6 +198,8 @@ const EXTRA_ACTIVITIES = [
 const BASICAS = 16;
 /* pontos que a participante ganha por fechar as 3 atividades de um dia */
 const PONTOS_DIA = 25;
+/* cada vídeo publicado e registrado vale pontos, contado por endereço distinto */
+const PONTOS_VIDEO = 10;
 const DEFAULT_PRIZES = [
   "Primeiro lugar:",
   "1 microfone Hollyland ou um tripé Ulanzi de MagSafe ou uma luz de led da Ulanzi para iluminar os vídeos",
@@ -621,7 +623,7 @@ app.exportDetalhado=()=>{
       });
     });
     state.videos.filter(v=>v.ownerId===id).sort((a,b)=>(a.date||"").localeCompare(b.date||"")).forEach(function(v){
-      linhas.push([nome,mail,(v.date||keyFromTs(v.ts)),"Vídeo publicado","","",v.link||"",""]);
+      linhas.push([nome,mail,(v.date||keyFromTs(v.ts)),"Vídeo publicado","",PONTOS_VIDEO,v.link||"",""]);
     });
     state.backstage.filter(b=>b.ownerId===id&&b.kind!=="prova").forEach(function(b){
       linhas.push([nome,mail,(b.date||keyFromTs(b.ts)),"Bastidor enviado","","","",""]);
@@ -829,7 +831,8 @@ function temComprovacao(uid,k){
 }
 const diaCompleto=(uid,k)=>tresMarcadas(uid,k)&&temComprovacao(uid,k);
 const diasValidos=(uid)=>Object.keys(state.days[uid]||{}).filter(k=>diaCompleto(uid,k)).length;
-const pointsOf=(uid)=>{
+const pointsOf=(uid)=>pontosDosDias(uid)+contaVideos(uid)*PONTOS_VIDEO;
+const pontosDosDias=(uid)=>{
   const chaves={};
   Object.keys(state.days[uid]||{}).forEach(k=>chaves[k]=1);
   Object.keys(state.extras[uid]||{}).forEach(k=>chaves[k]=1);
@@ -1040,7 +1043,7 @@ function renderSecRow(){
 function renderSection(){
   const el=byId("sectionArea");if(!el)return;
   if(state.section==="ranking"){el.innerHTML='<div class="card"><h2 class="cardTitle">Ranking geral</h2>'
-    +'<p style="color:var(--muted);font-size:13px;line-height:1.5;margin:6px 0 14px;">A ordem é pela pontuação. Cada dia com as 3 atividades marcadas e com comprovação, seja o link do vídeo ou um print com a data da publicação visível, vale '+PONTOS_DIA+' pontos, e é também o que libera os pontos das ações extras daquele dia. Em caso de empate, quem publicou mais vídeos fica na frente.</p>'
+    +'<p style="color:var(--muted);font-size:13px;line-height:1.5;margin:6px 0 14px;">A ordem é pela pontuação. Cada vídeo publicado vale '+PONTOS_VIDEO+' pontos. Cada dia com as 3 atividades marcadas e com comprovação, seja o link do vídeo ou um print com a data da publicação visível, vale '+PONTOS_DIA+' pontos, e é também o que libera os pontos das ações extras daquele dia.</p>'
     +'<div id="rankData"></div></div>';}
   else if(state.section==="videos"){
     el.innerHTML='<div class="card"><input class="field" id="vLink" placeholder="Link do Instagram, TikTok ou YouTube" style="margin-bottom:12px;"/>'
@@ -1268,6 +1271,7 @@ function detalheHTML(id){
     d.acts.forEach(function(a){ linha+='<div style="color:var(--muted);font-size:13px;line-height:1.5;">'+esc(a.t)+'</div>'+comprovHTML(a.link)+fotosHTML(a.fotos); });
     d.extras.forEach(function(a){ linha+='<div style="color:#fff;font-size:13px;line-height:1.5;">'+esc(a.t)+(a.p?' <span style="color:#ff06a3;">'+a.p+'</span>':'')+'</div>'+comprovHTML(a.link)+fotosHTML(a.fotos); });
     d.videos.forEach(function(v){ linha+='<div style="font-size:13px;line-height:1.5;"><a href="'+esc(v.link)+'" target="_blank" rel="noopener" style="color:#ff06a3;word-break:break-all;">'+esc(v.link)+'</a></div>'; });
+    if(d.videos.length)linha+='<div style="color:var(--muted);font-size:13px;">'+d.videos.length+(d.videos.length===1?' vídeo':' vídeos')+' neste dia</div>';
     if(d.bastidor)linha+='<div style="color:var(--muted);font-size:13px;">Bastidores enviados: '+d.bastidor+'</div>';
     if(d.pago)linha+='<div style="color:#3ddc97;font-size:13px;">Marcou está pago</div>';
     return linha+'</div>';
