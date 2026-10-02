@@ -200,6 +200,8 @@ const BASICAS = 16;
 const PONTOS_DIA = 25;
 /* cada vídeo publicado e registrado vale pontos, contado por endereço distinto */
 const PONTOS_VIDEO = 10;
+/* meta de publicações do desafio, usada como critério de quem está apta */
+const META_VIDEOS = GOAL;
 const DEFAULT_PRIZES = [
   "Primeiro lugar:",
   "1 microfone Hollyland ou um tripé Ulanzi de MagSafe ou uma luz de led da Ulanzi para iluminar os vídeos",
@@ -358,7 +360,13 @@ app.saveExtraLink=async(idx,el)=>{
    e nas ações de postagem: postar o vídeo, postar 1x, 2x e 3x ao dia. Assim,
    quem publicou 1 vídeo conta 1, mesmo repetindo o link em várias atividades,
    e quem publicou 2 ou 3 conta 2 ou 3, pelos links distintos. */
-const EXTRAS_QUE_CONTAM = {2:true, 3:true, 4:true, 5:true};
+/* ações cujo resultado é uma publicação nova: o link colado nelas conta como vídeo.
+   Ficam de fora as de interação, pesquisa, roteiro e perfil, onde o link costuma ser
+   de um vídeo que já foi publicado. */
+const EXTRAS_QUE_CONTAM = {2:true, 3:true, 4:true, 5:true, 9:true, 10:true,
+  18:true, 19:true, 20:true, 21:true, 22:true, 23:true, 24:true, 25:true, 26:true,
+  27:true, 28:true, 29:true, 30:true, 31:true, 32:true, 33:true, 34:true, 35:true,
+  36:true, 37:true, 45:true};
 /* das 3 obrigatórias, interagir com a audiência não é publicação do dia:
    o link colado ali costuma ser de um vídeo antigo em que a pessoa respondeu comentários */
 const BASICAS_QUE_CONTAM = {0:true, 1:true};
@@ -588,11 +596,11 @@ function podeExportar(){
 }
 app.exportResumo=()=>{
   if(!podeExportar())return;
-  const linhas=[["Posição","Nome","E-mail","Pontos","Vídeos publicados","Endereços repetidos","Dias completos","Extras marcadas","Bastidores","Dias marcados como pago"]];
+  const linhas=[["Posição","Nome","E-mail","Pontos","Vídeos publicados","Cumpriu a meta de "+META_VIDEOS,"Endereços repetidos","Dias completos","Extras marcadas","Bastidores","Dias marcados como pago"]];
   idsOrdenados().forEach(function(id,i){
     const pt=state.participants[id];
     const extras=Object.values(state.extras[id]||{}).reduce((t,a)=>t+((a||[]).filter(Boolean).length),0);
-    linhas.push([i+1,pt.name,pt.email||"",pointsOf(id),contaVideos(id),repetidosDe(id),
+    linhas.push([i+1,pt.name,pt.email||"",pointsOf(id),contaVideos(id),(contaVideos(id)>=META_VIDEOS?"sim":"não"),repetidosDe(id),
       diasCompletos(id),extras,state.backstage.filter(b=>b.ownerId===id&&b.kind!=="prova").length,
       Object.values(state.pagos[id]||{}).filter(Boolean).length]);
   });
@@ -692,7 +700,7 @@ app.apagarAviso=async(id)=>{
 /* Varredura única: até 4 de setembro os links colados nas comprovações não viravam
    registro de vídeo. Esta rotina roda uma vez por participante e registra o que ficou
    para trás, sem apagar nem duplicar nada. */
-const MARCA_RESGATE = "resgateLinks4";
+const MARCA_RESGATE = "resgateLinks5";
 /* devolve dois conjuntos de chaves: as que valem como vídeo publicado
    e as que aparecem apenas em comprovações que não contam */
 function mapaDosLinks(uid){
@@ -1133,7 +1141,8 @@ function refreshSectionData(){
       return '<div class="rankRow" style="'+(me?"background:rgba(255,107,157,0.10);":"")+'">'
         +'<div class="rankPos" style="color:'+medal+';">'+(i<3?"♛":(i+1))+'</div>'
         +'<div style="flex:1;"><div style="color:#fff;margin-bottom:4px;">'+esc(p.name)+(me?' <span class="tag">você</span>':"")+'</div>'
-        +'<div style="color:var(--muted);font-size:12px;margin-bottom:6px;">'+p.count+' '+(p.count===1?"vídeo":"vídeos")+' · '+p.greenDays+(p.greenDays===1?' dia concluído':' dias concluídos')+'</div>'
+        +'<div style="color:var(--muted);font-size:12px;margin-bottom:6px;">'+p.count+' '+(p.count===1?"vídeo":"vídeos")+' · '+p.greenDays+(p.greenDays===1?' dia concluído':' dias concluídos')
+        +(p.count>=META_VIDEOS?' <span style="color:#3ddc97;">meta cumprida</span>':'')+'</div>'
         +'<div class="bar"><span style="width:'+pct+'%"></span></div></div>'
         +'<div style="width:64px;text-align:right;"><div style="font-family:var(--display);font-weight:700;font-size:21px;color:#ff06a3;line-height:1.1;">'+p.pontos+'</div>'
         +'<div style="color:var(--muted);font-size:11px;">'+(p.pontos===1?"ponto":"pontos")+'</div></div></div>';
@@ -1187,6 +1196,7 @@ function refreshSectionData(){
           +'<div style="display:flex;gap:16px;flex-wrap:wrap;color:var(--muted);font-size:12px;text-align:right;">'
           +'<div><div>vídeos</div><div style="color:#fff;font-size:16px;font-weight:700;font-family:var(--display);">'+l.videos+'</div></div>'
           +(l.repetidos?'<div><div>repetidos</div><div style="color:#f6a821;font-size:16px;font-weight:700;font-family:var(--display);">'+l.repetidos+'</div></div>':'')
+          +'<div><div>meta</div><div style="color:'+(l.videos>=META_VIDEOS?'#3ddc97':'var(--muted)')+';font-size:16px;font-weight:700;font-family:var(--display);">'+(l.videos>=META_VIDEOS?'sim':'não')+'</div></div>'
           +'<div><div>dias completos</div><div style="color:#fff;font-size:16px;font-weight:700;font-family:var(--display);">'+l.dias+'</div></div>'
           +'<div><div>extras</div><div style="color:#fff;font-size:16px;font-weight:700;font-family:var(--display);">'+l.extras+'</div></div>'
           +'<div><div>pontos</div><div style="color:#ff06a3;font-size:16px;font-weight:700;font-family:var(--display);">'+l.pontos+'</div></div>'
